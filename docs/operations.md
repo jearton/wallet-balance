@@ -2,19 +2,21 @@
 
 [返回 README](../README.md)
 
-## 发布镜像部署（Linux）
+## 发布镜像部署
 
-`Dockerfile` 使用多阶段构建，运行镜像仅包含生产依赖、编译后的 Node 程序、浏览器资源和 PWA 文件。应用镜像由 GitHub Actions 的 Linux runner 构建、发布并冒烟测试，目前仅支持 `linux/amd64`。
+`Dockerfile` 使用多阶段构建，运行镜像仅包含生产依赖、编译后的 Node 程序、浏览器资源和 PWA 文件。应用镜像由 GitHub Actions 的 Linux runner 构建、发布并冒烟测试，支持 `linux/amd64` 和 `linux/arm64`。
 
-无需克隆仓库。在 Linux 主机上下载发布版本的 Compose 配置并启动：
+Linux、macOS 和 Windows 均可通过支持 Linux 容器的 Docker 环境运行。镜像同时包含 `linux/amd64` 和 `linux/arm64`，Docker 自动选择架构；Apple Silicon Mac 使用原生 arm64 镜像，无需模拟。跨架构运行支持见 [Docker 文档](https://docs.docker.com/build/building/multi-platform/)。
+
+无需克隆仓库。下载发布版本的 Compose 配置并启动（以下命令适用于 Bash/Zsh；Windows 可使用 WSL 终端）：
 
 ```bash
 mkdir wallet-balance && cd wallet-balance
-curl -fsSL https://raw.githubusercontent.com/jearton/wallet-balance/v1.0.0/compose.production.yaml -o compose.yaml
+curl -fsSL https://raw.githubusercontent.com/jearton/wallet-balance/v1.0.1/compose.production.yaml -o compose.yaml
 docker compose up -d
 ```
 
-该配置默认使用 `ghcr.io/jearton/wallet-balance:1.0.0`。升级时选择 [Releases](https://github.com/jearton/wallet-balance/releases) 中的目标版本，先备份，再执行以下命令（将 `X.Y.Z` 替换为目标版本号）：
+该配置默认使用 `ghcr.io/jearton/wallet-balance:1.0.1`。升级时选择 [Releases](https://github.com/jearton/wallet-balance/releases) 中的目标版本，先备份，再执行以下命令（将 `X.Y.Z` 替换为目标版本号）：
 
 ```bash
 WALLET_VERSION=X.Y.Z docker compose pull
@@ -25,7 +27,7 @@ WALLET_VERSION=X.Y.Z docker compose up -d
 
 此配置默认绑定 `127.0.0.1:4173`，首次启动不启用随机钱包创建。已有卷中的暂停状态优先。需要局域网访问时再设置 `BIND_ADDRESS` 和访问控制；不要直接对公网开放未认证的服务。数据卷仍位于 `/home/node`，需要保留数据库与密钥。
 
-macOS 使用源码开发配置 `compose.yaml` 或 Dev Container，不运行发布镜像，不进行本机 Dockerfile 构建。`compose.yaml` 的源码入口与 `npm run dev` 使用 `.ts`；发布镜像运行 `dist/server/index.js`。
+本项目的 macOS **开发流程**使用 Dev Container 运行源码，不在本机构建或通过 OrbStack 运行应用发布镜像。这是开发约定，并不表示应用不支持 macOS。当前本地服务使用官方 Node 运行时挂载源码；仓库 `compose.yaml` 的源码入口与 `npm run dev` 使用 `.ts`，发布镜像运行 `dist/server/index.js`。
 
 ## 源码运行（开发者）
 
@@ -50,7 +52,7 @@ docker compose up -d
 docker compose ps
 ```
 
-macOS 开发请在 Dev Container 中执行源码与构建命令；不要运行 `docker build`、`docker buildx`、BuildKit 或 `docker compose up --build`。如需发布应用镜像，应在 Linux CI 构建，当前仅使用 `linux/amd64`，不使用 QEMU 模拟构建。
+macOS 开发请在 Dev Container 中执行源码与构建命令；不要运行 `docker build`、`docker buildx`、BuildKit 或 `docker compose up --build`。如需发布应用镜像，应在 Linux CI 构建，使用原生 amd64/arm64 runner，不使用 QEMU 模拟构建。
 
 Compose 将 4173 发布到宿主机的所有接口，允许私有 IPv4 局域网访问，并**默认启用定时创建**。只需手动查询时，可在首次启动前将 Compose 中 `WALLET_GENERATION_ENABLED` 改为 `"false"`。已有持久化暂停状态时，请通过界面暂停任务，环境变量不会覆盖已保存的状态。
 

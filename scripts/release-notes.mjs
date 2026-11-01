@@ -11,7 +11,7 @@ const lines = [
   "TypeScript application with encrypted SQLite history, 13-chain balance queries and PWA support.",
   "",
   "- Type checks, ESLint, Prettier and automated tests passed.",
-  "- Container built and smoke-tested on Linux amd64.",
+  "- Container built and smoke-tested on native Linux amd64 and arm64 runners.",
   `- Image: \`${image}\``,
   `- Digest: \`${digest}\``,
   "",

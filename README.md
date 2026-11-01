@@ -17,11 +17,13 @@
 
 ## 快速开始
 
-需要 **Linux amd64 主机、Docker 和 Docker Compose**，以及能访问 GHCR 与公共 RPC 的网络。使用已发布镜像，无需下载源码或安装 Node.js。
+需要 **Docker 和 Docker Compose**，以及能访问 GHCR 与公共 RPC 的网络。Linux、macOS 或 Windows 上能够运行 Linux 容器的 Docker 环境均可使用；无需下载源码或安装 Node.js。
+
+发布镜像同时提供 `linux/amd64` 和 `linux/arm64`，Docker 自动选择架构。Intel/AMD 机器及 Apple Silicon Mac 均可使用，无需跨架构模拟。
 
 ```bash
 mkdir wallet-balance && cd wallet-balance
-curl -fsSL https://raw.githubusercontent.com/jearton/wallet-balance/v1.0.0/compose.production.yaml -o compose.yaml
+curl -fsSL https://raw.githubusercontent.com/jearton/wallet-balance/v1.0.1/compose.production.yaml -o compose.yaml
 docker compose up -d
 ```
 
@@ -34,7 +36,7 @@ docker compose logs --tail=50  # 查看日志
 docker compose down           # 停止并移除容器，保留数据卷
 ```
 
-`docker compose down -v` 会删除数据。局域网访问、HTTPS、升级与备份见[部署说明](docs/operations.md)。镜像发布到 [GHCR](https://github.com/jearton/wallet-balance/pkgs/container/wallet-balance)，当前支持 `linux/amd64`；macOS 源码开发见[贡献指南](CONTRIBUTING.md#开发与验证)。
+`docker compose down -v` 会删除数据。局域网访问、HTTPS、升级与备份见[部署说明](docs/operations.md)。镜像发布到 [GHCR](https://github.com/jearton/wallet-balance/pkgs/container/wallet-balance)，支持 `linux/amd64` 和 `linux/arm64`；macOS 源码开发见[贡献指南](CONTRIBUTING.md#开发与验证)。
 
 ## 使用方式
 
@@ -63,15 +65,15 @@ docker compose down           # 停止并移除容器，保留数据卷
 
 ```bash
 # 公开开发账户，只读查询 Ethereum
-docker run --rm --entrypoint node ghcr.io/jearton/wallet-balance:1.0.0 \
+docker run --rm --entrypoint node ghcr.io/jearton/wallet-balance:1.0.1 \
   dist/cli/index.js --chain ethereum --address 0x627306090abaB3A6e1400e9345bC60c78a8BEf57
 
 # 交互式隐藏输入私钥
-docker run --rm -it --entrypoint node ghcr.io/jearton/wallet-balance:1.0.0 \
+docker run --rm -it --entrypoint node ghcr.io/jearton/wallet-balance:1.0.1 \
   dist/cli/index.js --chain ethereum
 
 # 查看全部参数
-docker run --rm --entrypoint node ghcr.io/jearton/wallet-balance:1.0.0 \
+docker run --rm --entrypoint node ghcr.io/jearton/wallet-balance:1.0.1 \
   dist/cli/index.js --help
 ```
 

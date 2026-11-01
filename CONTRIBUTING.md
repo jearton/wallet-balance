@@ -88,6 +88,6 @@ node scripts/check-public-wallets.mjs --community
 
 ## 发布
 
-更新 `package.json` 版本和 `CHANGELOG.md`，运行 `npm run check` 并提交。创建与版本一致的 `vX.Y.Z` 标签并推送后，Release workflow 会在 Linux runner 上检查、构建 `linux/amd64` 镜像、推送 GHCR、运行镜像冒烟测试，并创建 GitHub Release。发布失败时先检查 Actions 日志，不覆盖已有版本标签。
+更新 `package.json` 版本和 `CHANGELOG.md`，运行 `npm run check` 并提交。创建与版本一致的 `vX.Y.Z` 标签并推送后，Release workflow 会在 Linux runner 上检查、在原生 amd64/arm64 runner 上分别构建与测试镜像，再合并多平台清单并推送 GHCR，并创建 GitHub Release。发布失败时先检查 Actions 日志，不覆盖已有版本标签。
 
-应用镜像只由 CI 构建；macOS 不执行 Dockerfile 构建，也不拉取或运行应用镜像。开发使用 `.devcontainer/` 或官方 Node 运行时挂载源码。
+应用镜像只由 Linux CI 构建。macOS 本地开发使用 `.devcontainer/` 运行源码，不执行 Dockerfile 构建，也不通过 OrbStack 拉取或运行应用发布镜像。这是本项目的开发约定，不限制最终用户通过兼容的 Docker 环境运行发布镜像。

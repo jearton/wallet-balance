@@ -1,4 +1,4 @@
-# Application images are built only by Linux CI (linux/amd64).
+# Application images are built only by native Linux CI (linux/amd64 and linux/arm64).
 FROM node:24-alpine AS dependencies
 WORKDIR /app
 COPY package.json package-lock.json ./

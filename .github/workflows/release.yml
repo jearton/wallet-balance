@@ -8,10 +8,19 @@ concurrency:
   group: release-${{ github.ref }}
   cancel-in-progress: false
 jobs:
-  publish:
-    runs-on: ubuntu-latest
+  build:
+    name: Build ${{ matrix.arch }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
     permissions:
-      contents: write
+      contents: read
       packages: write
     steps:
       - uses: actions/checkout@v5
@@ -31,25 +40,15 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - uses: docker/metadata-action@v5
-        id: meta
-        with:
-          images: ghcr.io/${{ github.repository }}
-          tags: |
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=raw,value=latest,enable=${{ !contains(github.ref_name, '-') }}
-      - name: Build and publish amd64 image
+      - name: Build and publish native image
         id: image
         uses: docker/build-push-action@v6
         with:
           context: .
-          platforms: linux/amd64
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          platforms: linux/${{ matrix.arch }}
+          outputs: type=image,name=ghcr.io/${{ github.repository }},push-by-digest=true,name-canonical=true,push=true
+          cache-from: type=gha,scope=${{ matrix.arch }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.arch }}
       - name: Smoke test published image
         env:
           IMAGE: ghcr.io/${{ github.repository }}@${{ steps.image.outputs.digest }}
@@ -59,16 +58,91 @@ jobs:
           for attempt in $(seq 1 30); do
             if curl --fail --silent http://127.0.0.1:4173/ >/dev/null; then
               curl --fail --silent http://127.0.0.1:4173/api/generation
+              curl --fail --silent http://127.0.0.1:4173/assets/app.js >/dev/null
+              curl --fail --silent http://127.0.0.1:4173/assets/app.css >/dev/null
+              curl --fail --silent http://127.0.0.1:4173/manifest.webmanifest >/dev/null
+              test "$(docker image inspect "$IMAGE" --format '{{.Architecture}}')" = "${{ matrix.arch }}"
+              docker run --rm --entrypoint node "$IMAGE" dist/cli/index.js --help
               exit 0
             fi
             sleep 2
           done
           exit 1
+      - name: Export tested digest
+        env:
+          DIGEST: ${{ steps.image.outputs.digest }}
+        run: |
+          mkdir -p /tmp/digests
+          touch "/tmp/digests/${DIGEST#sha256:}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: digest-${{ matrix.arch }}
+          path: /tmp/digests/*
+          retention-days: 1
+  publish:
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: digest-*
+          path: /tmp/digests
+          merge-multiple: true
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/metadata-action@v5
+        id: meta
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest,enable=${{ !contains(github.ref_name, '-') }}
+      - name: Publish multi-platform manifest
+        id: manifest
+        env:
+          IMAGE: ghcr.io/${{ github.repository }}
+          TAGS: ${{ steps.meta.outputs.tags }}
+        run: |
+          args=()
+          while IFS= read -r tag; do
+            args+=(--tag "$tag")
+          done <<< "$TAGS"
+          sources=()
+          for digest in /tmp/digests/*; do
+            sources+=("$IMAGE@sha256:${digest##*/}")
+          done
+          test "${#sources[@]}" -eq 2
+          docker buildx imagetools create "${args[@]}" "${sources[@]}"
+          version="${GITHUB_REF_NAME#v}"
+          docker buildx imagetools inspect "$IMAGE:$version" --raw > /tmp/manifest.json
+          node --input-type=module <<'JS'
+          import { readFileSync } from 'node:fs';
+          const manifest = JSON.parse(readFileSync('/tmp/manifest.json', 'utf8'));
+          for (const architecture of ['amd64', 'arm64']) {
+            if (!manifest.manifests.some(m => m.platform?.os === 'linux' && m.platform?.architecture === architecture)) {
+              throw new Error(`Missing linux/${architecture} image`);
+            }
+          }
+          JS
+          digest=$(docker buildx imagetools inspect "$IMAGE:$version" --format '{{json .Manifest.Digest}}' | tr -d '"')
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_TAG: ${{ github.ref_name }}
-          IMAGE_DIGEST: ${{ steps.image.outputs.digest }}
+          IMAGE_DIGEST: ${{ steps.manifest.outputs.digest }}
         run: |
           node scripts/release-notes.mjs
           gh release create "$RELEASE_TAG" --verify-tag --title "Wallet Balance $RELEASE_TAG" --notes-file /tmp/release-notes.md

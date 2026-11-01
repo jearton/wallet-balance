@@ -1,9 +1,8 @@
-# Linux deployment only. On macOS, use the source Dev Container / compose.yaml.
+# Multi-platform image: Docker selects linux/amd64 or linux/arm64 for the host.
 name: wallet-balance
 services:
   web:
-    image: ghcr.io/jearton/wallet-balance:${WALLET_VERSION:-1.0.0}
-    platform: linux/amd64
+    image: ghcr.io/jearton/wallet-balance:${WALLET_VERSION:-1.0.1}
     environment:
       HOST: 0.0.0.0
       ALLOW_LAN: "true"
