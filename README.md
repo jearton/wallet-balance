@@ -1,25 +1,50 @@
 # Wallet Balance
 
-**使用 TypeScript 构建、本地运行的多链钱包余额工具。** 输入公开地址、私钥或 12/24 词助记词，查询 13 条主网的原生币与常见代币，按输入保存历史并随时重新查询。
+本地运行的多链钱包余额工具。输入公开地址、私钥或 12/24 词助记词，查询原生币与常见代币，并保存查询历史。
 
-[快速开始](#快速开始) · [使用指南](docs/usage.md) · [部署与备份](docs/operations.md) · [参与开发](CONTRIBUTING.md) · [反馈问题](https://github.com/jearton/wallet-balance/issues) · [MIT License](LICENSE)
+[快速开始](#快速开始) · [使用指南](docs/usage.md) · [部署与备份](docs/operations.md) · [开发贡献](#开发与贡献) · [Releases](https://github.com/jearton/wallet-balance/releases)
 
 ![Wallet Balance 桌面端：公开地址查询与代币余额](docs/screenshots/overview.jpg)
 
 ## 功能
 
-- **多链查询**：10 条 EVM 主网，以及 Bitcoin、Solana、TRON；按币种汇总，展开查看各网络结果。
-- **三种输入**：公开地址、私钥、BIP-39 英文助记词；支持助记词校验、导入和前缀补全。
-- **一份输入，一条历史**：重复查询更新原记录；多链地址归入同一个钱包，成功后才保存，零余额也保留。
-- **本地持久化**：SQLite 保存历史，助记词与私钥使用 AES-256-GCM 加密，按需显示。
-- **后台任务**：定时创建并查询钱包；自动补查历史中未完成的查询，支持暂停与恢复创建。
-- **网页与 CLI**：React 自适应界面、PWA 安装入口，以及支持隐藏输入私钥的命令行。
+- **多链余额**：支持 13 条主网，按币种汇总，展开查看各网络结果。
+- **三种输入**：公开地址、私钥、BIP-39 英文助记词，支持助记词校验与前缀补全。
+- **查询历史**：同一输入只保存一条记录，重复查询更新结果，多链地址归入同一个钱包。
+- **本地存储**：SQLite 保存历史，助记词与私钥通过 AES-256-GCM 加密，按需显示。
+- **后台查询**：定时创建并查询钱包，自动补查未完成的历史，支持暂停与恢复创建。
+- **多端使用**：自适应网页、PWA 安装入口与命令行查询。
 
-> 适用于本机或可信内网。服务没有账号认证，能访问服务的人可以查看历史并显示已保存的密钥。仅查余额时优先使用公开地址；不要直接暴露到公网。
+## 快速开始
 
-## 界面预览
+需要 **Linux amd64 主机、Docker 和 Docker Compose**，以及能访问 GHCR 与公共 RPC 的网络。使用已发布镜像，无需下载源码或安装 Node.js。
 
-### 查询历史与钱包详情
+```bash
+mkdir wallet-balance && cd wallet-balance
+curl -fsSL https://raw.githubusercontent.com/jearton/wallet-balance/v1.0.0/compose.production.yaml -o compose.yaml
+docker compose up -d
+```
+
+打开 **<http://127.0.0.1:4173>**。默认绑定宿主机本地地址，首次启动不启用定时创建；历史与加密密钥保存在 Docker 命名卷中。
+
+> 服务没有账号认证，能访问服务的人可以查看历史和已保存的密钥。请仅在本机或可信内网使用，不要直接暴露到公网。仅查余额时优先使用公开地址。
+
+```bash
+docker compose logs --tail=50  # 查看日志
+docker compose down           # 停止并移除容器，保留数据卷
+```
+
+`docker compose down -v` 会删除数据。局域网访问、HTTPS、升级与备份见[部署说明](docs/operations.md)。镜像发布到 [GHCR](https://github.com/jearton/wallet-balance/pkgs/container/wallet-balance)，当前支持 `linux/amd64`；macOS 源码开发见[贡献指南](CONTRIBUTING.md#开发与验证)。
+
+## 使用方式
+
+### 网页
+
+1. 选择公开地址、私钥或助记词，输入钱包信息。
+2. 点击查询；结果按代币汇总，可展开查看各链余额。
+3. 至少一个网络查询成功后保存历史；重复输入更新原记录，可在详情中重新查询。
+
+一组助记词、一个私钥或一个公开地址各为唯一记录。助记词默认派生第一个地址；公开地址匹配兼容网络。助记词和其派生私钥属于不同输入。失败结果跳过，成功返回的零余额正常保存。
 
 ![同一钱包的多链余额、统一助记词入口与各链地址](docs/screenshots/history.jpg)
 
@@ -30,35 +55,24 @@
 
 </details>
 
-截图来自独立演示实例，仅使用公开教学钱包。余额为截图时的查询结果，不代表实时余额，也不代表转账权限；截图未展示助记词或私钥。
-
-## 快速开始
-
-需要 **Node.js 24+**、npm，以及能访问公共 RPC 的网络。
-
-```bash
-git clone https://github.com/jearton/wallet-balance.git
-cd wallet-balance
-npm ci --ignore-scripts
-npm run build
-npm run web
-```
-
-打开 **<http://127.0.0.1:4173>**，选择「公开地址」，输入钱包地址，点击「查询钱包余额」。原生运行默认仅监听本机，定时创建默认关闭。
-
-macOS 开发请在项目 Dev Container 中执行 Node 命令。不要在 macOS 构建应用容器镜像；现有 Compose 使用官方 Node 运行时挂载源码，不需要 `docker build`。容器运行、局域网和 HTTPS 配置见[部署说明](docs/operations.md)。
+截图来自独立演示实例，仅使用公开教学钱包；余额为截图时的结果，未展示助记词或私钥。输入格式、历史重查、定时任务与 PWA 安装见[使用指南](docs/usage.md)。
 
 ### 命令行
 
+镜像也包含 CLI，无需启动网页服务：
+
 ```bash
 # 公开开发账户，只读查询 Ethereum
-npm start -- --chain ethereum --address 0x627306090abaB3A6e1400e9345bC60c78a8BEf57
+docker run --rm --entrypoint node ghcr.io/jearton/wallet-balance:1.0.0 \
+  dist/cli/index.js --chain ethereum --address 0x627306090abaB3A6e1400e9345bC60c78a8BEf57
 
 # 交互式隐藏输入私钥
-npm start -- --chain ethereum
+docker run --rm -it --entrypoint node ghcr.io/jearton/wallet-balance:1.0.0 \
+  dist/cli/index.js --chain ethereum
 
 # 查看全部参数
-npm start -- --help
+docker run --rm --entrypoint node ghcr.io/jearton/wallet-balance:1.0.0 \
+  dist/cli/index.js --help
 ```
 
 CLI 不保存密钥或历史，默认查询原生币；指定 ERC-20 合约时使用 `--chain` 和 `--token`。助记词输入与常见代币自动查询在网页提供。
@@ -77,16 +91,7 @@ CLI 不保存密钥或历史，默认查询原生币；指定 ERC-20 合约时�
 
 自动查询的代币由[显式白名单](src/shared/common-tokens.ts)维护，合约条目附原始来源。未收录的 EVM 代币可手填合约。Polygon、Avalanche 与 WSOL 已停用，旧结果不参与展示或汇总。
 
-## 查询与存储规则
-
-1. **本地推导**：助记词按默认路径派生第一个地址，公开地址只匹配兼容网络。
-2. **只读查询**：RPC 只接收公开地址及查询参数，不接收助记词或私钥；没有签名、转账功能。
-3. **成功后保存**：至少一个网络成功才写入历史；失败结果跳过，全部失败时保留原有历史。
-4. **按输入去重**：一组助记词、一个私钥或一个公开地址各为唯一记录；助记词与其派生私钥属于不同输入。
-
-网页会把助记词和私钥发送给本地服务加密保存。RPC 提供方仍能看到查询地址与来源 IP。加密不能防御同时取得数据库与服务端密钥的访问者；详见[数据与访问边界](docs/operations.md#数据与访问边界)。
-
-## 使用限制
+## 使用限制与数据安全
 
 - **不等于完整钱包资产**：不扫描 HD 账户、找零地址或其他派生路径；不统计 NFT、DeFi、交易所资产或法币估值。
 - **不自动发现所有代币**：仅查询白名单与指定合约。Solana 代币必须完整枚举账户；节点不支持时跳过，不展示部分余额。
@@ -94,47 +99,30 @@ CLI 不保存密钥或历史，默认查询原生币；指定 ERC-20 合约时�
 - **公共节点可能受限**：手动查询还可能受浏览器 CORS 影响；支持的 EVM 网络可指定 HTTPS RPC。
 - **PWA 仍需本地服务**：手机完整安装需可信 HTTPS；普通局域网 IP 的 HTTP 访问可能只能添加快捷方式。离线不缓存钱包、历史或余额。
 
-## 版本与容器镜像
+地址推导在本地完成，RPC 仅接收公开地址与只读查询参数，不接收助记词或私钥；程序不签名、不转账。RPC 提供方仍能看到查询地址与来源 IP。
 
-正式版本见 [GitHub Releases](https://github.com/jearton/wallet-balance/releases)，容器包发布到 [GHCR](https://github.com/jearton/wallet-balance/pkgs/container/wallet-balance)。镜像仅由 Linux CI 构建和验证，当前支持 `linux/amd64`。Linux 部署见 [容器部署](docs/operations.md#发布镜像部署linux)。
+网页会向本地服务提交助记词和私钥以加密保存。加密不能防御同时取得数据库与服务端密钥的访问者。数据位置、访问边界与备份方式见[部署与备份](docs/operations.md#数据与访问边界)。
 
-## 工程检查
+## 开发与贡献
+
+项目使用 **TypeScript strict、React、Tailwind CSS、Node.js 24 与 SQLite**。浏览器资源打包为静态文件，Node 服务负责历史、加密存储与后台任务；服务端和 CLI 也编译为 JavaScript。
 
 ```bash
-npm run typecheck     # TypeScript strict 类型检查
-npm run lint          # ESLint（零警告）
-npm run format:check  # Prettier 格式检查
-npm test              # 离线自动化测试
-npm run check         # 上述检查 + 前后端打包
+git clone https://github.com/jearton/wallet-balance.git
+cd wallet-balance
 ```
 
-`npm run format` 自动格式化，`npm run lint:fix` 修复可自动修复的 lint 问题。开发环境可用 `npm run dev` 直接运行并监听 TypeScript 服务端；浏览器资源仍需先打包。正式运行入口 `npm run web` 和 CLI `npm start` 使用 `dist/` 中编译后的 JavaScript。
+在 Node.js 24+ 开发环境执行以下命令；macOS 请先用 VS Code 的 **Reopen in Container** 打开项目提供的 `.devcontainer/`。
 
-## 项目结构
-
-```text
-src/
-  client/       # React 应用：入口、页面组合、业务组件、UI 与样式
-  server/       # HTTP、SQLite、加密存储与后台任务
-  shared/       # 浏览器与 Node 共用的地址、派生和余额逻辑与共享类型
-  cli/          # 命令行入口
-public/         # HTML、PWA、离线页与图标
-tests/          # 自动化测试
-scripts/        # 开发维护工具，不参与应用启动
-docs/           # 使用、部署、截图与第三方许可
+```bash
+npm ci --ignore-scripts
+npm run check  # 类型检查、ESLint、Prettier、测试及打包
+npm run web    # 启动网页服务
 ```
 
-前端 `main.tsx` 只负责初始化与挂载，`App.tsx` 组合业务界面；`features/` 按钱包输入、余额、历史、定时任务和 PWA 划分，通用 UI 放在 `components/`。详见[贡献指南](CONTRIBUTING.md#项目结构)。
+源码位于 `src/client/`、`src/server/`、`src/shared/` 与 `src/cli/`。测试位于 `tests/`，维护工具位于 `scripts/`。项目结构、开发监听、独立测试与发布流程见[贡献指南](CONTRIBUTING.md)。应用镜像仅由 Linux CI 构建和发布。
 
-## 文档与贡献
-
-| 文档                             | 内容                                      |
-| -------------------------------- | ----------------------------------------- |
-| [使用指南](docs/usage.md)        | 输入格式、派生路径、历史重查、代币和 PWA  |
-| [部署与备份](docs/operations.md) | 配置、Compose、定时任务、数据卷与故障排查 |
-| [贡献指南](CONTRIBUTING.md)      | 开发命令、项目结构、测试及提交要求        |
-
-欢迎通过 [Issues](https://github.com/jearton/wallet-balance/issues) 反馈问题或提交 Pull Request。请只提供公开测试样例，不要提交真实助记词、私钥、数据库或 RPC 凭据。
+欢迎提交 [Issues](https://github.com/jearton/wallet-balance/issues) 或 Pull Request。问题报告请附复现步骤、运行方式与版本；仅使用公开测试样例，不要提交真实助记词、私钥、数据库或 RPC 凭据。
 
 ## 许可证与致谢
 

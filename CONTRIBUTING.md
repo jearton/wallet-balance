@@ -13,10 +13,29 @@
 Node.js 24+；macOS 请在 Dev Container 中执行源码，不在宿主机构建应用镜像。
 
 ```bash
+git clone https://github.com/jearton/wallet-balance.git
+cd wallet-balance
+```
+
+macOS 在此处用 VS Code 的 **Reopen in Container** 打开项目，再在容器终端执行：
+
+```bash
 npm ci --ignore-scripts
 npm run check
 npm run web
 ```
+
+打开 <http://127.0.0.1:4173>。`npm run check` 会完成以下检查及打包：
+
+```bash
+npm run typecheck     # TypeScript strict 类型检查
+npm run lint          # ESLint（零警告）
+npm run format:check  # Prettier 格式检查
+npm test              # 离线自动化测试
+npm run build         # 浏览器资源、服务端与 CLI 打包
+```
+
+`npm run format` 自动格式化，`npm run lint:fix` 修复可自动修复的问题。首次打包后，`npm run dev` 可直接运行并监听 TypeScript 服务端；浏览器资源仍需另行打包。`npm run web` 和 CLI `npm start -- --help` 使用 `dist/` 中编译后的 JavaScript。
 
 应用源码统一使用 `.ts/.tsx`，`tsconfig.json` 开启 `strict`；开发和测试可使用 Node 24 原生类型擦除，正式运行使用 esbuild 生成的 JavaScript。类型检查由 `tsc --noEmit` 单独执行，打包不能替代类型检查。ESLint 使用 flat config 和 typescript-eslint，Prettier 负责格式。
 

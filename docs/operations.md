@@ -2,9 +2,34 @@
 
 [返回 README](../README.md)
 
-## 本机运行
+## 发布镜像部署（Linux）
 
-在 Node.js 24+ 环境执行：
+`Dockerfile` 使用多阶段构建，运行镜像仅包含生产依赖、编译后的 Node 程序、浏览器资源和 PWA 文件。应用镜像由 GitHub Actions 的 Linux runner 构建、发布并冒烟测试，目前仅支持 `linux/amd64`。
+
+无需克隆仓库。在 Linux 主机上下载发布版本的 Compose 配置并启动：
+
+```bash
+mkdir wallet-balance && cd wallet-balance
+curl -fsSL https://raw.githubusercontent.com/jearton/wallet-balance/v1.0.0/compose.production.yaml -o compose.yaml
+docker compose up -d
+```
+
+该配置默认使用 `ghcr.io/jearton/wallet-balance:1.0.0`。升级时选择 [Releases](https://github.com/jearton/wallet-balance/releases) 中的目标版本，先备份，再执行以下命令（将 `X.Y.Z` 替换为目标版本号）：
+
+```bash
+WALLET_VERSION=X.Y.Z docker compose pull
+WALLET_VERSION=X.Y.Z docker compose up -d
+```
+
+升级时沿用同一目录和 Compose 项目名称，以继续使用原数据卷。
+
+此配置默认绑定 `127.0.0.1:4173`，首次启动不启用随机钱包创建。已有卷中的暂停状态优先。需要局域网访问时再设置 `BIND_ADDRESS` 和访问控制；不要直接对公网开放未认证的服务。数据卷仍位于 `/home/node`，需要保留数据库与密钥。
+
+macOS 使用源码开发配置 `compose.yaml` 或 Dev Container，不运行发布镜像，不进行本机 Dockerfile 构建。`compose.yaml` 的源码入口与 `npm run dev` 使用 `.ts`；发布镜像运行 `dist/server/index.js`。
+
+## 源码运行（开发者）
+
+克隆源码与开发环境准备见[贡献指南](../CONTRIBUTING.md#开发与验证)。在 Node.js 24+ 开发环境执行：
 
 ```bash
 npm ci --ignore-scripts
@@ -14,7 +39,7 @@ npm run web
 
 服务固定使用 4173 端口，默认绑定 `127.0.0.1`。`npm start` 是命令行查询入口，`npm run web` 才启动网页。首次启动必须生成浏览器资源。
 
-## Compose 运行
+## 源码 Compose（开发者）
 
 仓库使用官方 `node:24-alpine` 运行时挂载本地源码，不构建应用镜像。先在开发环境安装依赖并打包，再启动：
 
@@ -43,7 +68,7 @@ docker compose start
 
 ## 运行配置
 
-以下是 Node 服务的环境变量；Compose 已显式设置部分值。
+以下是 Node 服务的环境变量；Compose 已显式设置部分值。发布配置默认关闭定时创建；源码 Compose 默认开启。
 
 | 变量                            | 原生运行默认值 | 说明                                                 |
 | ------------------------------- | -------------- | ---------------------------------------------------- |
@@ -85,7 +110,7 @@ curl -X POST -H 'Content-Type: application/json' -d '{}' http://127.0.0.1:4173/a
 ```bash
 docker compose stop -t 300
 mkdir -p "$HOME/wallet-balance-backups"
-docker run --rm --volumes-from wallet-balance:ro \
+docker run --rm --volumes-from "$(docker compose ps -aq web)":ro \
   -v "$HOME/wallet-balance-backups:/backup" \
   node:24-alpine sh -c 'umask 077; tar -czf /backup/wallet-data-$(date +%Y%m%d-%H%M%S).tar.gz -C /home/node wallet-data'
 docker compose start
@@ -110,17 +135,3 @@ iOS/Android 完整 PWA 安装依赖手机信任的 HTTPS。普通局域网 IP �
 | Solana 只有 SOL        | 节点未能完整枚举代币账户，对应代币已跳过，不用部分 ATA 余额替代                 |
 | 私钥/历史无法解密      | 检查数据库与 `history.key` 是否匹配、卷挂载及文件权限，不要生成新密钥覆盖旧文件 |
 | 暂停后查询仍在执行     | 暂停只阻止下一轮创建，已有查询与历史补查会继续                                  |
-
-## 发布镜像部署（Linux）
-
-`Dockerfile` 使用多阶段构建，运行镜像仅包含生产依赖、编译后的 Node 程序、浏览器资源和 PWA 文件。应用镜像由 GitHub Actions 的 Linux runner 构建、发布并冒烟测试，目前仅支持 `linux/amd64`。
-
-在 Linux 主机上执行：
-
-```bash
-WALLET_VERSION=1.0.0 docker compose -f compose.production.yaml up -d
-```
-
-此配置默认绑定 `127.0.0.1:4173`，首次启动不启用随机钱包创建。已有卷中的暂停状态优先。需要局域网访问时再设置 `BIND_ADDRESS` 和访问控制；不要直接对公网开放未认证的服务。数据卷仍位于 `/home/node`，需要保留数据库与密钥。
-
-macOS 使用源码开发配置 `compose.yaml` 或 Dev Container，不运行发布镜像，不进行本机 Dockerfile 构建。`compose.yaml` 的源码入口与 `npm run dev` 使用 `.ts`；发布镜像运行 `dist/server/index.js`。
