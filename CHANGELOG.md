@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.0.2](https://github.com/jearton/wallet-balance/compare/v1.0.1...v1.0.2) (2026-11-01)
+
+### Features
+
+- **tooling:** ✨ add emoji commits and generate release changelogs ([26b8565](https://github.com/jearton/wallet-balance/commit/26b8565a81b50a9375066749f2d303874af1e318))
+
 ## 1.0.1 — 2026-11-01
 
 - GHCR 同一版本标签提供 linux/amd64 和 linux/arm64 镜像，Docker 自动选择架构。

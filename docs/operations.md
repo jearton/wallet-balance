@@ -12,11 +12,11 @@ Linux、macOS 和 Windows 均可通过支持 Linux 容器的 Docker 环境运行
 
 ```bash
 mkdir wallet-balance && cd wallet-balance
-curl -fsSL https://raw.githubusercontent.com/jearton/wallet-balance/v1.0.1/compose.production.yaml -o compose.yaml
+curl -fsSL https://raw.githubusercontent.com/jearton/wallet-balance/v1.0.2/compose.production.yaml -o compose.yaml
 docker compose up -d
 ```
 
-该配置默认使用 `ghcr.io/jearton/wallet-balance:1.0.1`。升级时选择 [Releases](https://github.com/jearton/wallet-balance/releases) 中的目标版本，先备份，再执行以下命令（将 `X.Y.Z` 替换为目标版本号）：
+该配置默认使用 `ghcr.io/jearton/wallet-balance:1.0.2`。升级时选择 [Releases](https://github.com/jearton/wallet-balance/releases) 中的目标版本，先备份，再执行以下命令（将 `X.Y.Z` 替换为目标版本号）：
 
 ```bash
 WALLET_VERSION=X.Y.Z docker compose pull

@@ -23,7 +23,7 @@
 
 ```bash
 mkdir wallet-balance && cd wallet-balance
-curl -fsSL https://raw.githubusercontent.com/jearton/wallet-balance/v1.0.1/compose.production.yaml -o compose.yaml
+curl -fsSL https://raw.githubusercontent.com/jearton/wallet-balance/v1.0.2/compose.production.yaml -o compose.yaml
 docker compose up -d
 ```
 
@@ -65,15 +65,15 @@ docker compose down           # 停止并移除容器，保留数据卷
 
 ```bash
 # 公开开发账户，只读查询 Ethereum
-docker run --rm --entrypoint node ghcr.io/jearton/wallet-balance:1.0.1 \
+docker run --rm --entrypoint node ghcr.io/jearton/wallet-balance:1.0.2 \
   dist/cli/index.js --chain ethereum --address 0x627306090abaB3A6e1400e9345bC60c78a8BEf57
 
 # 交互式隐藏输入私钥
-docker run --rm -it --entrypoint node ghcr.io/jearton/wallet-balance:1.0.1 \
+docker run --rm -it --entrypoint node ghcr.io/jearton/wallet-balance:1.0.2 \
   dist/cli/index.js --chain ethereum
 
 # 查看全部参数
-docker run --rm --entrypoint node ghcr.io/jearton/wallet-balance:1.0.1 \
+docker run --rm --entrypoint node ghcr.io/jearton/wallet-balance:1.0.2 \
   dist/cli/index.js --help
 ```
 
