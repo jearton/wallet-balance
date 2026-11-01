@@ -1,0 +1,27 @@
+# Linux deployment only. On macOS, use the source Dev Container / compose.yaml.
+name: wallet-balance
+services:
+  web:
+    image: ghcr.io/jearton/wallet-balance:${WALLET_VERSION:-1.0.0}
+    platform: linux/amd64
+    environment:
+      HOST: 0.0.0.0
+      ALLOW_LAN: "true"
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS:-}
+      DATA_DIR: /home/node/wallet-data
+      WALLET_GENERATION_ENABLED: "false"
+    ports:
+      - "${BIND_ADDRESS:-127.0.0.1}:4173:4173"
+    volumes:
+      - wallet-data:/home/node
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=16m
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    init: true
+    restart: unless-stopped
+    stop_grace_period: 5m
+volumes:
+  wallet-data:

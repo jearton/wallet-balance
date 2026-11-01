@@ -1,0 +1,16 @@
+{
+  "name": "Wallet Balance",
+  "image": "node:24-bookworm",
+  "remoteUser": "node",
+  "forwardPorts": [4173],
+  "postCreateCommand": "npm ci --ignore-scripts && npm run build",
+  "customizations": {
+    "vscode": {
+      "extensions": ["dbaeumer.vscode-eslint", "esbenp.prettier-vscode"],
+      "settings": {
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+      }
+    }
+  }
+}

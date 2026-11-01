@@ -7,8 +7,8 @@ import {
   nonEvmWalletFromPrivateKey,
   validateNonEvmAddress,
   queryNonEvmBalance,
-} from "../src/shared/non-evm.mjs";
-import { createQueryPlan } from "../src/shared/query-plan.mjs";
+} from "../src/shared/non-evm.ts";
+import { createQueryPlan } from "../src/shared/query-plan.ts";
 import { base58 } from "#wallet-crypto";
 
 // Public BIP-39 test vector, never fund these wallets.
@@ -23,10 +23,7 @@ test("BTC, SOL and TRON use independent paths and round-trip their network key f
   for (const family of Object.keys(NON_EVM)) {
     const wallet = nonEvmWalletFromMnemonic(family, phrase, 12);
     assert.equal(wallet.address, expected[family]);
-    assert.equal(
-      nonEvmWalletFromPrivateKey(family, wallet.privateKey).address,
-      wallet.address,
-    );
+    assert.equal(nonEvmWalletFromPrivateKey(family, wallet.privateKey).address, wallet.address);
     assert.equal(validateNonEvmAddress(family, wallet.address), wallet.address);
   }
   const solana = nonEvmWalletFromMnemonic("solana", phrase, 12);
@@ -36,16 +33,9 @@ test("BTC, SOL and TRON use independent paths and round-trip their network key f
     solana.address,
   );
   bytes[63] ^= 1;
-  assert.throws(
-    () => nonEvmWalletFromPrivateKey("solana", base58.encode(bytes)),
-    /公私钥须匹配/,
-  );
-  assert.throws(() =>
-    validateNonEvmAddress("tron", expected.tron.slice(0, -1) + "1"),
-  );
-  assert.throws(() =>
-    validateNonEvmAddress("bitcoin", expected.bitcoin.slice(0, -1) + "q"),
-  );
+  assert.throws(() => nonEvmWalletFromPrivateKey("solana", base58.encode(bytes)), /公私钥须匹配/);
+  assert.throws(() => validateNonEvmAddress("tron", expected.tron.slice(0, -1) + "1"));
+  assert.throws(() => validateNonEvmAddress("bitcoin", expected.bitcoin.slice(0, -1) + "q"));
   assert.throws(() => validateNonEvmAddress("solana", expected.tron));
 });
 
@@ -145,10 +135,7 @@ test("Solana uses finalized commitment and exact lamport conversion; rejects inv
   });
   assert.equal(result.native, "1.000000001");
   assert.equal(result.block, "42");
-  assert.deepEqual(requests[0].body.params, [
-    expected.solana,
-    { commitment: "finalized" },
-  ]);
+  assert.deepEqual(requests[0].body.params, [expected.solana, { commitment: "finalized" }]);
   const bad = await node(t, () => ({
     id: 1,
     result: { context: { slot: 42 }, value: 9007199254740992 },

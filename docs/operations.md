@@ -45,14 +45,14 @@ docker compose start
 
 以下是 Node 服务的环境变量；Compose 已显式设置部分值。
 
-| 变量 | 原生运行默认值 | 说明 |
-| --- | --- | --- |
-| `HOST` | `127.0.0.1` | Compose 使用 `0.0.0.0` |
-| `DATA_DIR` | 项目下 `data/` | 数据库、密钥与迁移备份目录 |
-| `ALLOW_LAN` | 未启用 | 设置 `true` 后接受私有 IPv4 Host |
-| `ALLOWED_HOSTS` | 空 | 额外允许的域名，逗号分隔；Compose 预设 OrbStack 域名 |
-| `WALLET_GENERATION_ENABLED` | 未启用 | `true` 时首次默认启用定时创建，已有持久化状态优先 |
-| `WALLET_GENERATION_INTERVAL_MS` | `5000` | 每轮结束后的等待时间，至少 `1000` 毫秒 |
+| 变量                            | 原生运行默认值 | 说明                                                 |
+| ------------------------------- | -------------- | ---------------------------------------------------- |
+| `HOST`                          | `127.0.0.1`    | Compose 使用 `0.0.0.0`                               |
+| `DATA_DIR`                      | 项目下 `data/` | 数据库、密钥与迁移备份目录                           |
+| `ALLOW_LAN`                     | 未启用         | 设置 `true` 后接受私有 IPv4 Host                     |
+| `ALLOWED_HOSTS`                 | 空             | 额外允许的域名，逗号分隔；Compose 预设 OrbStack 域名 |
+| `WALLET_GENERATION_ENABLED`     | 未启用         | `true` 时首次默认启用定时创建，已有持久化状态优先    |
+| `WALLET_GENERATION_INTERVAL_MS` | `5000`         | 每轮结束后的等待时间，至少 `1000` 毫秒               |
 
 定时任务生成 24 词助记词，在内存查询后保存成功结果。每轮结束才等待下一个周期，不重叠、不补跑停机期间的任务；全部失败时不新增记录或累计数。
 
@@ -101,12 +101,26 @@ iOS/Android 完整 PWA 安装依赖手机信任的 HTTPS。普通局域网 IP �
 
 ## 常见问题
 
-| 现象 | 排查方式 |
-| --- | --- |
-| 服务启动后资源加载失败 | 确认执行过 `npm ci --ignore-scripts` 和 `npm run build` |
-| 端口被占用 | 检查已有本地服务或容器是否使用 4173 |
-| 域名访问返回 403 | 检查 `ALLOWED_HOSTS`；跨站写入还会校验 Origin |
-| 余额缺项、查询超时 | 公共节点可能限流或受 CORS 限制；失败不代表零余额，可稍后重查或换 EVM HTTPS RPC |
-| Solana 只有 SOL | 节点未能完整枚举代币账户，对应代币已跳过，不用部分 ATA 余额替代 |
-| 私钥/历史无法解密 | 检查数据库与 `history.key` 是否匹配、卷挂载及文件权限，不要生成新密钥覆盖旧文件 |
-| 暂停后查询仍在执行 | 暂停只阻止下一轮创建，已有查询与历史补查会继续 |
+| 现象                   | 排查方式                                                                        |
+| ---------------------- | ------------------------------------------------------------------------------- |
+| 服务启动后资源加载失败 | 确认执行过 `npm ci --ignore-scripts` 和 `npm run build`                         |
+| 端口被占用             | 检查已有本地服务或容器是否使用 4173                                             |
+| 域名访问返回 403       | 检查 `ALLOWED_HOSTS`；跨站写入还会校验 Origin                                   |
+| 余额缺项、查询超时     | 公共节点可能限流或受 CORS 限制；失败不代表零余额，可稍后重查或换 EVM HTTPS RPC  |
+| Solana 只有 SOL        | 节点未能完整枚举代币账户，对应代币已跳过，不用部分 ATA 余额替代                 |
+| 私钥/历史无法解密      | 检查数据库与 `history.key` 是否匹配、卷挂载及文件权限，不要生成新密钥覆盖旧文件 |
+| 暂停后查询仍在执行     | 暂停只阻止下一轮创建，已有查询与历史补查会继续                                  |
+
+## 发布镜像部署（Linux）
+
+`Dockerfile` 使用多阶段构建，运行镜像仅包含生产依赖、编译后的 Node 程序、浏览器资源和 PWA 文件。应用镜像由 GitHub Actions 的 Linux runner 构建、发布并冒烟测试，目前仅支持 `linux/amd64`。
+
+在 Linux 主机上执行：
+
+```bash
+WALLET_VERSION=1.0.0 docker compose -f compose.production.yaml up -d
+```
+
+此配置默认绑定 `127.0.0.1:4173`，首次启动不启用随机钱包创建。已有卷中的暂停状态优先。需要局域网访问时再设置 `BIND_ADDRESS` 和访问控制；不要直接对公网开放未认证的服务。数据卷仍位于 `/home/node`，需要保留数据库与密钥。
+
+macOS 使用源码开发配置 `compose.yaml` 或 Dev Container，不运行发布镜像，不进行本机 Dockerfile 构建。`compose.yaml` 的源码入口与 `npm run dev` 使用 `.ts`；发布镜像运行 `dist/server/index.js`。

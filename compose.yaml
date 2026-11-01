@@ -6,7 +6,7 @@ services:
     container_name: wallet-balance
     working_dir: /app
     user: node
-    command: ["node", "src/server/server.mjs"]
+    command: ["node", "src/server/server.ts"]
     environment:
       HOST: 0.0.0.0
       ALLOW_LAN: "true"
@@ -30,7 +30,13 @@ services:
     restart: unless-stopped
     stop_grace_period: 5m
     healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4173/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:4173/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
       interval: 30s
       timeout: 5s
       start_period: 5s

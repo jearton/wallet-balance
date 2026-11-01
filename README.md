@@ -1,6 +1,6 @@
 # Wallet Balance
 
-**本地运行的多链钱包余额工具。** 输入公开地址、私钥或 12/24 词助记词，查询 13 条主网的原生币与常见代币，按输入保存历史并随时重新查询。
+**使用 TypeScript 构建、本地运行的多链钱包余额工具。** 输入公开地址、私钥或 12/24 词助记词，查询 13 条主网的原生币与常见代币，按输入保存历史并随时重新查询。
 
 [快速开始](#快速开始) · [使用指南](docs/usage.md) · [部署与备份](docs/operations.md) · [参与开发](CONTRIBUTING.md) · [反馈问题](https://github.com/jearton/wallet-balance/issues) · [MIT License](LICENSE)
 
@@ -65,17 +65,17 @@ CLI 不保存密钥或历史，默认查询原生币；指定 ERC-20 合约时�
 
 ## 支持的网络
 
-| 地址体系 | 主网 | 原生币 |
-| --- | --- | --- |
-| EVM | Ethereum、Base、Arbitrum One、Optimism、Linea、Scroll、ZKsync Era | ETH |
-| EVM | BNB Smart Chain | BNB |
-| EVM | Mantle | MNT |
-| EVM | X Layer | OKB |
-| Bitcoin | Bitcoin | BTC |
-| Solana | Solana | SOL |
-| TRON | TRON | TRX |
+| 地址体系 | 主网                                                              | 原生币 |
+| -------- | ----------------------------------------------------------------- | ------ |
+| EVM      | Ethereum、Base、Arbitrum One、Optimism、Linea、Scroll、ZKsync Era | ETH    |
+| EVM      | BNB Smart Chain                                                   | BNB    |
+| EVM      | Mantle                                                            | MNT    |
+| EVM      | X Layer                                                           | OKB    |
+| Bitcoin  | Bitcoin                                                           | BTC    |
+| Solana   | Solana                                                            | SOL    |
+| TRON     | TRON                                                              | TRX    |
 
-自动查询的代币由[显式白名单](src/shared/common-tokens.mjs)维护，合约条目附原始来源。未收录的 EVM 代币可手填合约。Polygon、Avalanche 与 WSOL 已停用，旧结果不参与展示或汇总。
+自动查询的代币由[显式白名单](src/shared/common-tokens.ts)维护，合约条目附原始来源。未收录的 EVM 代币可手填合约。Polygon、Avalanche 与 WSOL 已停用，旧结果不参与展示或汇总。
 
 ## 查询与存储规则
 
@@ -94,13 +94,29 @@ CLI 不保存密钥或历史，默认查询原生币；指定 ERC-20 合约时�
 - **公共节点可能受限**：手动查询还可能受浏览器 CORS 影响；支持的 EVM 网络可指定 HTTPS RPC。
 - **PWA 仍需本地服务**：手机完整安装需可信 HTTPS；普通局域网 IP 的 HTTP 访问可能只能添加快捷方式。离线不缓存钱包、历史或余额。
 
+## 版本与容器镜像
+
+正式版本见 [GitHub Releases](https://github.com/jearton/wallet-balance/releases)，容器包发布到 [GHCR](https://github.com/jearton/wallet-balance/pkgs/container/wallet-balance)。镜像仅由 Linux CI 构建和验证，当前支持 `linux/amd64`。Linux 部署见 [容器部署](docs/operations.md#发布镜像部署linux)。
+
+## 工程检查
+
+```bash
+npm run typecheck     # TypeScript strict 类型检查
+npm run lint          # ESLint（零警告）
+npm run format:check  # Prettier 格式检查
+npm test              # 离线自动化测试
+npm run check         # 上述检查 + 前后端打包
+```
+
+`npm run format` 自动格式化，`npm run lint:fix` 修复可自动修复的 lint 问题。开发环境可用 `npm run dev` 直接运行并监听 TypeScript 服务端；浏览器资源仍需先打包。正式运行入口 `npm run web` 和 CLI `npm start` 使用 `dist/` 中编译后的 JavaScript。
+
 ## 项目结构
 
 ```text
 src/
   client/       # React 应用：入口、页面组合、业务组件、UI 与样式
   server/       # HTTP、SQLite、加密存储与后台任务
-  shared/       # 浏览器与 Node 共用的地址、派生和余额逻辑
+  shared/       # 浏览器与 Node 共用的地址、派生和余额逻辑与共享类型
   cli/          # 命令行入口
 public/         # HTML、PWA、离线页与图标
 tests/          # 自动化测试
@@ -108,15 +124,15 @@ scripts/        # 开发维护工具，不参与应用启动
 docs/           # 使用、部署、截图与第三方许可
 ```
 
-前端 `main.jsx` 只负责初始化与挂载，`App.jsx` 组合业务界面；`features/` 按钱包输入、余额、历史、定时任务和 PWA 划分，通用 UI 放在 `components/`。详见[贡献指南](CONTRIBUTING.md#项目结构)。
+前端 `main.tsx` 只负责初始化与挂载，`App.tsx` 组合业务界面；`features/` 按钱包输入、余额、历史、定时任务和 PWA 划分，通用 UI 放在 `components/`。详见[贡献指南](CONTRIBUTING.md#项目结构)。
 
 ## 文档与贡献
 
-| 文档 | 内容 |
-| --- | --- |
-| [使用指南](docs/usage.md) | 输入格式、派生路径、历史重查、代币和 PWA |
+| 文档                             | 内容                                      |
+| -------------------------------- | ----------------------------------------- |
+| [使用指南](docs/usage.md)        | 输入格式、派生路径、历史重查、代币和 PWA  |
 | [部署与备份](docs/operations.md) | 配置、Compose、定时任务、数据卷与故障排查 |
-| [贡献指南](CONTRIBUTING.md) | 开发命令、项目结构、测试及提交要求 |
+| [贡献指南](CONTRIBUTING.md)      | 开发命令、项目结构、测试及提交要求        |
 
 欢迎通过 [Issues](https://github.com/jearton/wallet-balance/issues) 反馈问题或提交 Pull Request。请只提供公开测试样例，不要提交真实助记词、私钥、数据库或 RPC 凭据。
 
@@ -124,4 +140,4 @@ docs/           # 使用、部署、截图与第三方许可
 
 本项目采用 [MIT License](LICENSE)。
 
-界面基于 React、Tailwind CSS 与 shadcn/ui（Radix），密码学与地址处理使用 ethers、Noble 和 Scure。shadcn/ui 的 MIT 许可保留在 [SHADCN-LICENSE](docs/licenses/SHADCN-LICENSE)，其他依赖遵循各自许可证。公开演示样例的出处见 [public-community-wallets.mjs](src/shared/public-community-wallets.mjs)。
+界面基于 React、Tailwind CSS 与 shadcn/ui（Radix），密码学与地址处理使用 ethers、Noble 和 Scure。shadcn/ui 的 MIT 许可保留在 [SHADCN-LICENSE](docs/licenses/SHADCN-LICENSE)，其他依赖遵循各自许可证。公开演示样例的出处见 [public-community-wallets.ts](src/shared/public-community-wallets.ts)。

@@ -4,13 +4,13 @@ import { mkdtempSync, rmSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createServer } from "node:http";
-import { openHistory } from "../src/server/history.mjs";
+import { openHistory } from "../src/server/history.ts";
 import {
   createWalletBatch,
   createWalletGeneration,
   handleWalletGeneration,
-} from "../src/server/wallet-generation.mjs";
-import { summarizeHistoryBalance } from "../src/shared/history-summary.mjs";
+} from "../src/server/wallet-generation.ts";
+import { summarizeHistoryBalance } from "../src/shared/history-summary.ts";
 
 function storeFor(t) {
   const path = mkdtempSync(join(tmpdir(), "wallet-generation-"));
@@ -30,10 +30,20 @@ test("batch creates one 24-word wallet and four encrypted address records only a
     throw new Error("must not access network");
   };
   try {
-    assert.deepEqual(await createWalletBatch(store, 24, { query: async ({ chain }) => ({ native: "0.0", symbol: chain.symbol, block: "1", assets: [] }) }), {
-      wallets: 1,
-      addressRecords: 4,
-    });
+    assert.deepEqual(
+      await createWalletBatch(store, 24, {
+        query: async ({ chain }) => ({
+          native: "0.0",
+          symbol: chain.symbol,
+          block: "1",
+          assets: [],
+        }),
+      }),
+      {
+        wallets: 1,
+        addressRecords: 4,
+      },
+    );
     const rows = store.list().records;
     assert.equal(rows.length, 4);
     const phrases = rows.map((row) => store.mnemonic(undefined, row.id));
@@ -46,11 +56,7 @@ test("batch creates one 24-word wallet and four encrypted address records only a
       assert.ok(row.hasPrivateKey && row.hasMnemonic);
       assert.ok(!JSON.stringify(row).includes(phrases[0]));
     }
-    assert.ok(
-      !readFileSync(join(path, "history.sqlite")).includes(
-        Buffer.from(phrases[0]),
-      ),
-    );
+    assert.ok(!readFileSync(join(path, "history.sqlite")).includes(Buffer.from(phrases[0])));
     assert.equal(requests, 0);
   } finally {
     globalThis.fetch = previous;
@@ -112,9 +118,7 @@ test("scheduler runs once per tick, persists pause, avoids overlapping work and 
 test("generation control rejects cross-site requests and allows local pause/resume", async (t) => {
   const { store } = storeFor(t);
   const job = createWalletGeneration(store, { enabled: true });
-  const server = createServer((req, res) =>
-    handleWalletGeneration(req, res, job),
-  );
+  const server = createServer((req, res) => handleWalletGeneration(req, res, job));
   await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
   t.after(() => {
     job.stop();
@@ -147,20 +151,31 @@ test("generation control rejects cross-site requests and allows local pause/resu
   assert.equal((await resumed.json()).paused, false);
 });
 
-test('automatic batches remain absent from history until queries finish and all-failure batches save nothing', async t => {
+test("automatic batches remain absent from history until queries finish and all-failure batches save nothing", async (t) => {
   const { store } = storeFor(t);
   let finish;
-  const gate = new Promise(resolve => { finish = resolve; });
-  const work = createWalletBatch(store, 24, { query: async ({ chain }) => {
-    await gate;
-    if (chain.family !== 'solana') throw new Error('temporary');
-    return { native: '0', symbol: 'SOL', block: '1', assets: [] };
-  } });
+  const gate = new Promise((resolve) => {
+    finish = resolve;
+  });
+  const work = createWalletBatch(store, 24, {
+    query: async ({ chain }) => {
+      await gate;
+      if (chain.family !== "solana") throw new Error("temporary");
+      return { native: "0", symbol: "SOL", block: "1", assets: [] };
+    },
+  });
   assert.equal(store.listWallets().records.length, 0);
   finish();
   assert.deepEqual(await work, { wallets: 1, addressRecords: 1 });
   assert.equal(store.listWallets().records.length, 1);
-  assert.deepEqual(store.list().records[0].networks, ['solana']);
-  assert.deepEqual(await createWalletBatch(store, 24, { query: async () => { throw new Error('offline'); } }), { wallets: 0, addressRecords: 0 });
+  assert.deepEqual(store.list().records[0].networks, ["solana"]);
+  assert.deepEqual(
+    await createWalletBatch(store, 24, {
+      query: async () => {
+        throw new Error("offline");
+      },
+    }),
+    { wallets: 0, addressRecords: 0 },
+  );
   assert.equal(store.listWallets().records.length, 1);
 });
