@@ -1109,3 +1109,45 @@ test("manual preparation prevents background compensation from claiming the same
   );
   assert.equal(store.balanceQueueStatus().remainingRecords, 0);
 });
+
+test("existing histories use indexed reservation lookups for background compensation", (t) => {
+  const directory = temp(t);
+  let store = openHistory(directory);
+  const record = store.create(undefined, input, undefined, { unqueried: true });
+  store.close();
+  const database = new DatabaseSync(join(directory, "history.sqlite"));
+  // Simulate an existing v10 database with thousands of completed query reservations.
+  database.exec(`DROP INDEX query_reservations_target_started;
+    DROP INDEX query_reservations_started;
+    WITH RECURSIVE numbers(n) AS (SELECT 1 UNION ALL SELECT n+1 FROM numbers WHERE n<6000)
+    INSERT INTO query_reservations(identity,ticket,started_at,networks,trigger_type)
+    SELECT 'identity-'||n,'ticket-'||n,'2020-01-01T00:00:00.000Z','[]','automatic' FROM numbers;`);
+  database.close();
+  store = openHistory(directory);
+  t.after(() => store.close());
+  const inspection = new DatabaseSync(join(directory, "history.sqlite"), { readOnly: true });
+  try {
+    const plan = inspection
+      .prepare(
+        `EXPLAIN QUERY PLAN
+      SELECT id FROM history WHERE NOT EXISTS (
+        SELECT 1 FROM query_reservations q WHERE q.target_id=history.id AND q.started_at>=?
+      )`,
+      )
+      .all("2026-01-01T00:00:00.000Z");
+    assert.ok(
+      plan.some(({ detail }) => /SEARCH q USING .*INDEX/.test(detail)),
+      JSON.stringify(plan),
+    );
+    assert.ok(!plan.some(({ detail }) => /SCAN q\b/.test(detail)), JSON.stringify(plan));
+    const cleanup = inspection
+      .prepare("EXPLAIN QUERY PLAN DELETE FROM query_reservations WHERE started_at<?")
+      .all("2026-01-01T00:00:00.000Z");
+    assert.ok(cleanup.some(({ detail }) => /SEARCH query_reservations USING .*INDEX/.test(detail)));
+  } finally {
+    inspection.close();
+  }
+  assert.equal(store.claimBalance().id, record.id);
+  assert.equal(store.claimBalance(), null);
+  assert.equal(store.balanceQueueStatus().remainingRecords, 1);
+});

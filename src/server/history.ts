@@ -337,6 +337,11 @@ export function openHistory(directory: string) {
     identity TEXT PRIMARY KEY, ticket TEXT NOT NULL UNIQUE, started_at TEXT NOT NULL,
     target_id TEXT, networks TEXT NOT NULL, token TEXT, browser TEXT, trigger_type TEXT NOT NULL
   )`);
+  // Backfill checks reservations for each history row; an unindexed lookup becomes quadratic.
+  db.exec(`CREATE INDEX IF NOT EXISTS query_reservations_target_started
+    ON query_reservations(target_id,started_at);
+    CREATE INDEX IF NOT EXISTS query_reservations_started
+    ON query_reservations(started_at);`);
   if (db.prepare("PRAGMA user_version").get()!.user_version < 10) db.exec("PRAGMA user_version=10");
   function queryIdentity(group: string | null, hash: string | null) {
     return createHmac("sha256", key)
