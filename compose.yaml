@@ -1,0 +1,40 @@
+name: wallet-balance
+
+services:
+  web:
+    image: node:24-alpine
+    container_name: wallet-balance
+    working_dir: /app
+    user: node
+    command: ["node", "server.mjs"]
+    environment:
+      HOST: 0.0.0.0
+      ALLOW_LAN: "true"
+      ALLOWED_HOSTS: wallet-balance.orb.local,${ALLOWED_HOSTS:-}
+      NODE_ENV: production
+      DATA_DIR: /home/node/wallet-data
+      WALLET_GENERATION_ENABLED: "true"
+      WALLET_GENERATION_INTERVAL_MS: "5000"
+    ports:
+      - "0.0.0.0:4173:4173"
+    volumes:
+      - .:/app:ro
+      - wallet-data:/home/node
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=16m
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    init: true
+    restart: unless-stopped
+    stop_grace_period: 5m
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4173/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      start_period: 5s
+      retries: 3
+
+volumes:
+  wallet-data:

@@ -1,0 +1,17 @@
+{
+  "id": "/",
+  "name": "Wallet Lab · 本地钱包工具",
+  "short_name": "Wallet Lab",
+  "description": "查询多链钱包余额，查看本地加密保存的历史记录。",
+  "lang": "zh-CN",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f4f9f7",
+  "theme_color": "#188777",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
