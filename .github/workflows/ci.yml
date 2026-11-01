@@ -13,9 +13,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v5
         with:
           node-version: 24
           cache: npm
       - run: npm ci --ignore-scripts
+      - name: Validate commit messages
+        env:
+          FROM_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          TO_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: npm run commitlint -- --from "$FROM_SHA" --to "$TO_SHA" --verbose
       - run: npm run check

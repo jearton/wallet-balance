@@ -9,6 +9,6 @@
 
 联网检查会向本地历史写入公开测试数据，默认目标是 `http://127.0.0.1:4173`。请先启动独立测试实例，通过 `WALLET_TEST_URL` 指定地址。测试用例在 `tests/`，普通离线验证运行 `npm test`。
 
-`build-server.mjs` 由 `npm run build:server` 调用，编译服务端和 CLI；`release-notes.mjs` 仅供 GitHub Release 工作流生成发布说明。
+`build-server.mjs` 由 `npm run build:server` 调用，编译服务端和 CLI；`release-notes.mjs` 供 GitHub Release 工作流根据版本间提交生成发布说明；`changelog.mjs` 由 `npm run changelog` 调用以更新仓库 changelog。`prepare-commit-message.mjs` 为 Git hook 自动补全类型对应的图标，共享规则位于 `lib/commit-convention.mjs`。
 
 前端资源由 `npm run build:web` 生成；密码学包由 `npm run build:crypto` 生成。两者都属于资源打包，不构建 Docker 镜像。

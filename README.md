@@ -118,11 +118,14 @@ cd wallet-balance
 
 ```bash
 npm ci --ignore-scripts
+npm run prepare  # 安装 Git hooks
 npm run check  # 类型检查、ESLint、Prettier、测试及打包
 npm run web    # 启动网页服务
 ```
 
 源码位于 `src/client/`、`src/server/`、`src/shared/` 与 `src/cli/`。测试位于 `tests/`，维护工具位于 `scripts/`。项目结构、开发监听、独立测试与发布流程见[贡献指南](CONTRIBUTING.md)。应用镜像仅由 Linux CI 构建和发布。
+
+提交使用带 emoji 的 Conventional Commits，可运行 `npm run commit` 交互式生成；Release 更新记录根据提交自动生成。具体规则见[提交规范](CONTRIBUTING.md#提交规范)。
 
 欢迎提交 [Issues](https://github.com/jearton/wallet-balance/issues) 或 Pull Request。问题报告请附复现步骤、运行方式与版本；仅使用公开测试样例，不要提交真实助记词、私钥、数据库或 RPC 凭据。
 

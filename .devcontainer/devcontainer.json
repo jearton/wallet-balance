@@ -3,7 +3,7 @@
   "image": "node:24-bookworm",
   "remoteUser": "node",
   "forwardPorts": [4173],
-  "postCreateCommand": "npm ci --ignore-scripts && npm run build",
+  "postCreateCommand": "npm ci --ignore-scripts && npm run prepare && npm run build",
   "customizations": {
     "vscode": {
       "extensions": ["dbaeumer.vscode-eslint", "esbenp.prettier-vscode"],

@@ -21,6 +21,7 @@ macOS 在此处用 VS Code 的 **Reopen in Container** 打开项目，再在容�
 
 ```bash
 npm ci --ignore-scripts
+npm run prepare  # 安装 Git hooks（--ignore-scripts 不会自动执行 prepare）
 npm run check
 npm run web
 ```
@@ -73,6 +74,41 @@ node scripts/check-public-wallets.mjs --community
 
 浏览器打包产物仍输出到 `dist/`，不会提交到 Git。服务端以项目根目录为静态资源和默认数据目录基准；移动源码不会创建新的历史数据位置。
 
+## 提交规范
+
+使用 Conventional Commits，图标位于类型与范围之后：
+
+```text
+feat(history): ✨ 添加历史记录重查
+fix(balances): 🐛 跳过不可查询的代币
+ci(release): 👷 更新多平台发布流程
+```
+
+推荐交互式提交，Commitizen + cz-git 会引导选择类型、范围和图标：
+
+```bash
+git add <files>
+npm run commit
+```
+
+普通 `git commit -m "fix(history): 修复分页"` 也会通过 `prepare-commit-msg` 自动补上对应图标。`commit-msg` 使用 commitlint 校验类型、描述与图标，CI 同样检查本次推送或 PR 中的提交。合并 PR 请使用符合规范的 squash 标题；不改写已有历史。
+
+| 类型     | 图标 | 用途       |
+| -------- | ---- | ---------- |
+| feat     | ✨   | 新功能     |
+| fix      | 🐛   | 修复问题   |
+| docs     | 📝   | 文档       |
+| style    | 💄   | 样式与格式 |
+| refactor | ♻️   | 重构       |
+| perf     | ⚡️   | 性能       |
+| test     | ✅   | 测试       |
+| build    | 📦️   | 构建与依赖 |
+| ci       | 👷   | CI 配置    |
+| chore    | 🔧   | 维护       |
+| revert   | ⏪️   | 回退       |
+
+不兼容变更使用 `feat(api)!: ✨ 修改接口`，并在正文提供 `BREAKING CHANGE: ...`，发布记录会突出显示。
+
 ## 提交要求
 
 - 一个 PR 聚焦一个可评审的问题，描述变化及实际验证结果。
@@ -88,6 +124,21 @@ node scripts/check-public-wallets.mjs --community
 
 ## 发布
 
-更新 `package.json` 版本和 `CHANGELOG.md`，运行 `npm run check` 并提交。创建与版本一致的 `vX.Y.Z` 标签并推送后，Release workflow 会在 Linux runner 上检查、在原生 amd64/arm64 runner 上分别构建与测试镜像，再合并多平台清单并推送 GHCR，并创建 GitHub Release。发布失败时先检查 Actions 日志，不覆盖已有版本标签。
+先提交功能或修复，再准备版本（将 `X.Y.Z` 替换为目标版本）：
+
+```bash
+npm version X.Y.Z --no-git-tag-version
+npm run changelog
+npm run format
+npm run check
+git add package.json package-lock.json CHANGELOG.md
+git commit -m "chore(release): X.Y.Z"
+git tag -a vX.Y.Z -m "Wallet Balance vX.Y.Z"
+git push origin main vX.Y.Z
+```
+
+`npm run changelog` 根据上一个版本标签到当前 HEAD 的 Conventional Commits，按类型生成并追加到仓库 `CHANGELOG.md`；`npm run changelog -- --stdout` 可预览。不需要手写更新条目，旧版本记录保留。
+
+Release workflow 会在原生 amd64/arm64 runner 上检查、构建与测试镜像，合并多平台清单并推送 GHCR。创建 GitHub Release 时会从完整 Git 历史读取上一个版本至当前标签的提交，自动生成分类 changelog、提交链接与破坏性变更说明，并附镜像地址和摘要。发布失败时先检查 Actions 日志，不覆盖已有版本标签。
 
 应用镜像只由 Linux CI 构建。macOS 本地开发使用 `.devcontainer/` 运行源码，不执行 Dockerfile 构建，也不通过 OrbStack 拉取或运行应用发布镜像。这是本项目的开发约定，不限制最终用户通过兼容的 Docker 环境运行发布镜像。
