@@ -27,7 +27,7 @@
 
 ## 代币余额
 
-网页自动查询 [common-tokens.mjs](../common-tokens.mjs) 收录的常见代币，按网络和合约/mint 识别，按币种展示。明确为同一版本的跨链金额精确汇总，桥接币、包装币和 Binance-Peg 版本分开。
+网页自动查询 [common-tokens.mjs](../src/shared/common-tokens.mjs) 收录的常见代币，按网络和合约/mint 识别，按币种展示。明确为同一版本的跨链金额精确汇总，桥接币、包装币和 Binance-Peg 版本分开。
 
 - EVM：原生币与代币在同一区块读取，可选择单链并填写 ERC-20 合约或自定义 HTTPS RPC。
 - Solana：分别枚举 SPL 与 Token-2022 的全部 owner token accounts，按 mint 精确合计；枚举不可用时跳过对应程序的代币，不回退到标准 ATA 子集。

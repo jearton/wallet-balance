@@ -6,7 +6,7 @@ services:
     container_name: wallet-balance
     working_dir: /app
     user: node
-    command: ["node", "server.mjs"]
+    command: ["node", "src/server/server.mjs"]
     environment:
       HOST: 0.0.0.0
       ALLOW_LAN: "true"

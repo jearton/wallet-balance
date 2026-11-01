@@ -34,14 +34,24 @@ node scripts/check-public-wallets.mjs --community
 
 | 路径 | 职责 |
 | --- | --- |
-| `web/react/`、`web/pwa/` | React 界面、样式、安装入口与离线资源 |
-| `wallet.mjs`、`non-evm.mjs`、`mnemonic.mjs` | 网络、地址、密钥和派生规则 |
-| `asset-query.mjs`、`common-tokens.mjs` | 原生币/代币查询与合约来源 |
-| `query-plan.mjs`、`query-results.mjs` | 输入匹配与有效结果过滤 |
-| `history.mjs`、`history-api.mjs` | SQLite、加密、唯一键及 HTTP 历史接口 |
-| `wallet-generation.mjs`、`balance-automation.mjs` | 定时创建与历史补查 |
-| `rpc-capabilities.mjs`、`node-retry.mjs` | 明确不支持的能力记忆与临时失败重试 |
-| `*.test.mjs` | Node 原生测试 |
+| `src/client/main.jsx` | 浏览器初始化、CSP nonce、能力记忆与 React 挂载 |
+| `src/client/App.jsx` | 页面状态和业务界面组合 |
+| `src/client/features/wallet/` | 网络选择、助记词输入与补全 |
+| `src/client/features/balances/` | 代币分组与网络余额明细 |
+| `src/client/features/history/` | 历史列表、钱包详情与密钥按需显示 |
+| `src/client/features/generation/`、`features/pwa/` | 定时任务控制与 PWA 安装 |
+| `src/client/components/`、`lib/`、`styles/` | 通用 UI、客户端 API/剪贴板工具、样式 |
+| `src/server/` | HTTP 路由、SQLite、加密历史、定时创建与历史补查 |
+| `src/shared/` | 地址、密钥派生、网络、代币、余额查询与能力记忆 |
+| `src/cli/index.mjs` | 交互式 CLI 入口 |
+| `public/` | 页面模板、Service Worker、Manifest、离线页与图标 |
+| `tests/` | Node 自动化测试与模拟 RPC |
+| `scripts/` | 显式执行的开发维护脚本，见 [scripts/README.md](scripts/README.md) |
+| `docs/` | 使用说明、部署备份、截图与第三方许可 |
+
+前端只从 `src/shared/` 引入通用逻辑，不引入包含 Node/SQLite 的 `src/server/` 模块。`main.jsx` 负责启动，业务组件放到相应 `features/`，可复用组件放到 `components/`。`jsconfig.json` 提供 `@/` 与 `@shared/` 编辑器/构建别名，`components.json` 与同一套路径保持一致。
+
+浏览器打包产物仍输出到 `dist/`，不会提交到 Git。服务端以项目根目录为静态资源和默认数据目录基准；移动源码不会创建新的历史数据位置。
 
 ## 提交要求
 

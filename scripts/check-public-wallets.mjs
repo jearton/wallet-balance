@@ -1,10 +1,10 @@
 // Live smoke check: queries public samples and writes successful results to local history.
 // Run explicitly: node scripts/check-public-wallets.mjs
 import assert from 'node:assert/strict';
-import { createQueryPlan } from '../query-plan.mjs';
-import { readHistoryBalances } from '../history-query.mjs';
-import { successfulResults } from '../query-results.mjs';
-import { PUBLIC_COMMUNITY_WALLETS } from '../public-community-wallets.mjs';
+import { createQueryPlan } from '../src/shared/query-plan.mjs';
+import { readHistoryBalances } from '../src/shared/history-query.mjs';
+import { successfulResults } from '../src/shared/query-results.mjs';
+import { PUBLIC_COMMUNITY_WALLETS } from '../src/shared/public-community-wallets.mjs';
 
 const url = process.env.WALLET_TEST_URL || 'http://127.0.0.1:4173';
 const solKey = '5MaiiCavjCmn9Hs1o3eznqDEhRwxo7pXiAYez7keQUviUkauRiTMD8DrESdrNjN8zd9mTmVhRvBJeg5vhyvgrAhG';

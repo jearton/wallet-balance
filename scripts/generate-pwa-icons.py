@@ -3,7 +3,7 @@ from pathlib import Path
 import struct
 import zlib
 
-ROOT = Path(__file__).resolve().parent.parent / 'web' / 'pwa' / 'icons'
+ROOT = Path(__file__).resolve().parent.parent / 'public' / 'icons'
 
 
 def rounded(x, y, left, top, right, bottom, radius):

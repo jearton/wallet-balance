@@ -75,7 +75,7 @@ CLI 不保存密钥或历史，默认查询原生币；指定 ERC-20 合约时�
 | Solana | Solana | SOL |
 | TRON | TRON | TRX |
 
-自动查询的代币由[显式白名单](common-tokens.mjs)维护，合约条目附原始来源。未收录的 EVM 代币可手填合约。Polygon、Avalanche 与 WSOL 已停用，旧结果不参与展示或汇总。
+自动查询的代币由[显式白名单](src/shared/common-tokens.mjs)维护，合约条目附原始来源。未收录的 EVM 代币可手填合约。Polygon、Avalanche 与 WSOL 已停用，旧结果不参与展示或汇总。
 
 ## 查询与存储规则
 
@@ -94,6 +94,22 @@ CLI 不保存密钥或历史，默认查询原生币；指定 ERC-20 合约时�
 - **公共节点可能受限**：手动查询还可能受浏览器 CORS 影响；支持的 EVM 网络可指定 HTTPS RPC。
 - **PWA 仍需本地服务**：手机完整安装需可信 HTTPS；普通局域网 IP 的 HTTP 访问可能只能添加快捷方式。离线不缓存钱包、历史或余额。
 
+## 项目结构
+
+```text
+src/
+  client/       # React 应用：入口、页面组合、业务组件、UI 与样式
+  server/       # HTTP、SQLite、加密存储与后台任务
+  shared/       # 浏览器与 Node 共用的地址、派生和余额逻辑
+  cli/          # 命令行入口
+public/         # HTML、PWA、离线页与图标
+tests/          # 自动化测试
+scripts/        # 开发维护工具，不参与应用启动
+docs/           # 使用、部署、截图与第三方许可
+```
+
+前端 `main.jsx` 只负责初始化与挂载，`App.jsx` 组合业务界面；`features/` 按钱包输入、余额、历史、定时任务和 PWA 划分，通用 UI 放在 `components/`。详见[贡献指南](CONTRIBUTING.md#项目结构)。
+
 ## 文档与贡献
 
 | 文档 | 内容 |
@@ -108,4 +124,4 @@ CLI 不保存密钥或历史，默认查询原生币；指定 ERC-20 合约时�
 
 本项目采用 [MIT License](LICENSE)。
 
-界面基于 React、Tailwind CSS 与 shadcn/ui（Radix），密码学与地址处理使用 ethers、Noble 和 Scure。shadcn/ui 的 MIT 许可保留在 [SHADCN-LICENSE](web/react/SHADCN-LICENSE)，其他依赖遵循各自许可证。公开演示样例的出处见 [public-community-wallets.mjs](public-community-wallets.mjs)。
+界面基于 React、Tailwind CSS 与 shadcn/ui（Radix），密码学与地址处理使用 ethers、Noble 和 Scure。shadcn/ui 的 MIT 许可保留在 [SHADCN-LICENSE](docs/licenses/SHADCN-LICENSE)，其他依赖遵循各自许可证。公开演示样例的出处见 [public-community-wallets.mjs](src/shared/public-community-wallets.mjs)。
