@@ -787,7 +787,7 @@ test("legacy encrypted mnemonics backfill wallet grouping without changing recor
   store.close();
   const db = new DatabaseSync(join(path, "history.sqlite"));
   db.exec(
-    "DROP INDEX history_wallet_group; DROP INDEX history_private_key; ALTER TABLE history DROP COLUMN wallet_group; PRAGMA user_version=5",
+    "DROP TRIGGER IF EXISTS history_index_insert; DROP TRIGGER IF EXISTS history_index_update; DROP TRIGGER IF EXISTS history_index_delete; DROP INDEX IF EXISTS history_group_cursor; DROP INDEX history_wallet_group; DROP INDEX history_private_key; ALTER TABLE history DROP COLUMN wallet_group; PRAGMA user_version=5",
   );
   db.close();
   store = openHistory(path);
@@ -1150,4 +1150,47 @@ test("existing histories use indexed reservation lookups for background compensa
   assert.equal(store.claimBalance().id, record.id);
   assert.equal(store.claimBalance(), null);
   assert.equal(store.balanceQueueStatus().remainingRecords, 1);
+});
+
+test("v10 upgrade indexes existing queues and keeps wallet filters in sync after writes and reopen", (t) => {
+  const dir = temp(t);
+  let store = openHistory(dir);
+  const pending = store.create(undefined, input, undefined, { unqueried: true });
+  store.close();
+  const oldDatabase = new DatabaseSync(join(dir, "history.sqlite"));
+  oldDatabase.exec(`DROP TRIGGER history_index_insert; DROP TRIGGER history_index_update; DROP TRIGGER history_index_delete;
+    DROP INDEX history_group_cursor; DROP TABLE balance_pending; DROP TABLE wallet_summary; DROP TABLE wallet_dirty;
+    PRAGMA user_version=10;`);
+  oldDatabase.close();
+  store = openHistory(dir);
+  try {
+    assert.equal(store.balanceQueueStatus().remainingRecords, 1);
+    assert.equal(store.listWallets(undefined, undefined, "unknown").totalCount, 1);
+    assert.equal(store.listWallets(undefined, undefined, "key-positive").totalCount, 0);
+    const claimed = store.claimBalance();
+    assert.equal(claimed.id, pending.id);
+    assert.equal(store.claimBalance(), null);
+    store.completeBackfill(
+      claimed.id,
+      claimed.networks.map((network) => ({
+        network,
+        status: "success",
+        native: "1",
+        symbol: "ETH",
+      })),
+      claimed.queryVersion,
+    );
+    assert.equal(store.balanceQueueStatus().remainingRecords, 0);
+    assert.equal(store.listWallets(undefined, undefined, "unknown").totalCount, 0);
+    assert.equal(
+      store.listWallets(undefined, undefined, "key-positive").records[0].records[0].id,
+      pending.id,
+    );
+  } finally {
+    store.close();
+  }
+  store = openHistory(dir);
+  t.after(() => store.close());
+  assert.equal(store.balanceQueueStatus().remainingRecords, 0);
+  assert.equal(store.listWallets(undefined, undefined, "key-positive").totalCount, 1);
 });

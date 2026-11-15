@@ -46,6 +46,15 @@ test("batch creates one 24-word wallet and four encrypted address records only a
     );
     const rows = store.list().records;
     assert.equal(rows.length, 4);
+    assert.deepEqual(rows.flatMap((row) => row.networks).sort(), [
+      "arbitrum",
+      "base",
+      "bitcoin",
+      "bsc",
+      "ethereum",
+      "solana",
+      "tron",
+    ]);
     const phrases = rows.map((row) => store.mnemonic(undefined, row.id));
     assert.equal(new Set(phrases).size, 1);
     assert.equal(phrases[0].split(" ").length, 24);

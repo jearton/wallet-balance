@@ -6,6 +6,7 @@ import type { Source } from "../shared/types.ts";
 // Each SQL statement reads only the columns it selects; raw SQLite values stop here.
 export interface DatabaseRow {
   id: string;
+  has_key: number;
   owner: string;
   seq: number;
   created_at: string;

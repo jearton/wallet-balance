@@ -3,18 +3,13 @@ type GenerationSnapshot = Pick<
   GenerationStatus,
   "paused" | "generatedCount" | "lastCreatedAt" | "lastError"
 >;
-import type {
-  HistoryRecord,
-  WalletHistoryRecord,
-  HistoryInput,
-  QueryResult,
-  BrowserInfo,
-} from "../shared/types.ts";
+import type { HistoryRecord, HistoryInput, QueryResult, BrowserInfo } from "../shared/types.ts";
 import { successfulResults } from "../shared/query-results.ts";
 import { privateKeyIdentity } from "../shared/non-evm.ts";
 import { summarizeWalletRecords } from "../shared/wallet-history.ts";
 import { isPublicTestWallet } from "../shared/public-test-wallets.ts";
 import { HISTORY_FILTERS, matchesHistoryFilter } from "../shared/history-summary.ts";
+import { openHistoryIndexes } from "./history-indexes.ts";
 import { openDatabase } from "./sqlite.ts";
 import type { DatabaseRow } from "./sqlite.ts";
 import { mkdirSync, readFileSync, writeFileSync, chmodSync, existsSync } from "node:fs";
@@ -343,6 +338,7 @@ export function openHistory(directory: string) {
     CREATE INDEX IF NOT EXISTS query_reservations_started
     ON query_reservations(started_at);`);
   if (db.prepare("PRAGMA user_version").get()!.user_version < 10) db.exec("PRAGMA user_version=10");
+  const historyIndexes = openHistoryIndexes(db);
   function queryIdentity(group: string | null, hash: string | null) {
     return createHmac("sha256", key)
       .update(JSON.stringify(["query-reservation-v1", group, hash]))
@@ -900,54 +896,45 @@ export function openHistory(directory: string) {
     listWallets(token: unknown, before = Number.MAX_SAFE_INTEGER, filter = "all") {
       if (!Number.isSafeInteger(before) || before < 1 || !HISTORY_FILTERS.includes(filter))
         throw new Error("分页或筛选参数无效。");
-      const totalWalletCount = db
-        .prepare("SELECT COUNT(DISTINCT COALESCE(wallet_group,id)) AS count FROM history")
-        .get()!.count;
-      if (filter !== "all") {
-        const grouped = new Map<string, HistoryRecord[]>();
-        for (const row of db.prepare("SELECT * FROM history ORDER BY seq DESC").all()) {
-          const id = row.wallet_group ?? row.id;
-          if (!grouped.has(id)) grouped.set(id, []);
-          grouped.get(id)!.push(publicRecord(row));
-        }
-        const matching = [...grouped]
-          .map(([id, rows]) => summarizeWalletRecords(rows, id))
-          .filter((wallet) => matchesHistoryFilter(wallet, filter));
-        const candidates = matching.filter((wallet) => wallet.cursor < before).slice(0, 21);
-        const records = candidates.slice(0, 20);
-        return {
-          records,
-          nextCursor: candidates.length > 20 ? records.at(-1)!.cursor : null,
-          totalCount: matching.length,
-          totalWalletCount,
-        };
-      }
-      const matches: WalletHistoryRecord[] = [];
-      let cursor = before;
-      while (matches.length < 21) {
-        const groups = db
-          .prepare(
-            "SELECT COALESCE(wallet_group,id) AS wallet_id,MAX(seq) AS cursor FROM history GROUP BY COALESCE(wallet_group,id) HAVING MAX(seq)<? ORDER BY cursor DESC LIMIT 100",
-          )
-          .all(cursor);
-        for (const group of groups) {
-          const rows = db
-            .prepare("SELECT * FROM history WHERE COALESCE(wallet_group,id)=? ORDER BY seq DESC")
-            .all(group.wallet_id);
-          const wallet = summarizeWalletRecords(rows.map(publicRecord), group.wallet_id);
-          if (matchesHistoryFilter(wallet, filter)) matches.push(wallet);
-          if (matches.length === 21) break;
-        }
-        if (groups.length < 100 || matches.length === 21) break;
-        cursor = groups.at(-1)!.cursor;
-      }
-      const records = matches.slice(0, 20);
+      historyIndexes.refresh(-1);
+      const predicates: Record<string, string> = {
+        all: "1",
+        private: "has_key=1",
+        "key-positive": "has_key=1 AND state='positive'",
+        positive: "state='positive'",
+        zero: "state='zero'",
+        unknown: "state='unknown'",
+      };
+      const where = predicates[filter];
+      const totalWalletCount = db.prepare("SELECT COUNT(*) AS count FROM wallet_summary").get()!
+        .count;
+      const totalCount =
+        filter === "all"
+          ? totalWalletCount
+          : db.prepare(`SELECT COUNT(*) AS count FROM wallet_summary WHERE ${where}`).get()!.count;
+      const groups = db
+        .prepare(
+          `SELECT wallet_id FROM wallet_summary WHERE ${where} AND cursor<?
+        ORDER BY cursor DESC LIMIT 21`,
+        )
+        .all(before);
+      const addresses = db.prepare(
+        "SELECT * FROM history WHERE COALESCE(wallet_group,id)=? ORDER BY seq DESC",
+      );
+      const records = groups
+        .slice(0, 20)
+        .map(({ wallet_id }) =>
+          summarizeWalletRecords(addresses.all(wallet_id).map(publicRecord), wallet_id),
+        );
       return {
         records,
-        nextCursor: matches.length > 20 ? records.at(-1)!.cursor : null,
-        totalCount: totalWalletCount,
+        nextCursor: groups.length > 20 ? records.at(-1)!.cursor : null,
+        totalCount,
         totalWalletCount,
       };
+    },
+    refreshWalletSummaries() {
+      return historyIndexes.refresh(500) === 500;
     },
     mnemonic(token: unknown, id: string) {
       const row = db.prepare("SELECT owner,mnemonic_secret FROM history WHERE id=?").get(id);
@@ -970,16 +957,13 @@ export function openHistory(directory: string) {
       try {
         const row = db
           .prepare(
-            `SELECT * FROM history WHERE
-          (balance_started_at IS NULL OR balance_started_at < ?)
-          AND NOT EXISTS (SELECT 1 FROM query_reservations q WHERE q.target_id=history.id AND q.started_at >= ?) AND EXISTS (
-            SELECT 1 FROM json_each(history.results) result
-            WHERE json_extract(result.value, '$.network') IN (SELECT value FROM json_each(?))
-              AND (json_extract(result.value, '$.status') = 'unqueried'
-              OR (json_extract(result.value, '$.status') = 'pending' AND history.created_at < ?))
-          ) ORDER BY seq ASC LIMIT 1`,
+            `SELECT h.* FROM balance_pending p CROSS JOIN history h ON h.id=p.id
+            WHERE (h.balance_started_at IS NULL OR h.balance_started_at < ?)
+              AND (p.unqueried=1 OR h.created_at < ?)
+              AND NOT EXISTS (SELECT 1 FROM query_reservations q WHERE q.target_id=h.id AND q.started_at >= ?)
+            ORDER BY p.seq ASC LIMIT 1`,
           )
-          .get(stale, stale, JSON.stringify(CHAIN_ORDER), stale);
+          .get(stale, stale, stale);
         if (!row) {
           db.exec("COMMIT");
           return null;
@@ -1000,14 +984,7 @@ export function openHistory(directory: string) {
     },
     balanceQueueStatus() {
       return {
-        remainingRecords: db
-          .prepare(
-            `SELECT COUNT(*) AS count FROM history WHERE EXISTS (
-        SELECT 1 FROM json_each(history.results) result WHERE json_extract(result.value, '$.status') IN ('unqueried','pending')
-          AND json_extract(result.value, '$.network') IN (SELECT value FROM json_each(?))
-      )`,
-          )
-          .get(JSON.stringify(CHAIN_ORDER))!.count,
+        remainingRecords: db.prepare("SELECT COUNT(*) AS count FROM balance_pending").get()!.count,
       };
     },
     rpcCapabilities(): CapabilityEntry[] {

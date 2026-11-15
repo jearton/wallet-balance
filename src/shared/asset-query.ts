@@ -7,7 +7,7 @@ import { withNodeRetries } from "./node-retry.ts";
 import { Interface, formatUnits, getAddress, hexlify } from "ethers";
 import { base58check, sha256 } from "#wallet-crypto";
 import { CHAINS, queryBalance, validateRpc } from "./wallet.ts";
-import { COMMON_TOKENS } from "./common-tokens.ts";
+import { COMMON_TOKENS, DEFAULT_TOKENS } from "./common-tokens.ts";
 
 const erc20 = new Interface([
   "function balanceOf(address) view returns (uint256)",
@@ -28,8 +28,9 @@ export async function queryAssets({
   endpoint = chain.rpc,
   timeout = 12000,
   common = true,
+  extendedTokens = false,
   capabilities = rpcCapabilities,
-}: BalanceQueryOptions & { common?: boolean }): Promise<BalanceResponse> {
+}: BalanceQueryOptions & { common?: boolean; extendedTokens?: boolean }): Promise<BalanceResponse> {
   if (chain.disabled) throw new Error("该网络已停用。");
   const native = await queryBalance({
     chain,
@@ -48,7 +49,7 @@ export async function queryAssets({
   const tokenMethod =
     chain.family === "tron" ? "/walletsolidity/triggerconstantcontract" : "eth_call";
   const tokens = common
-    ? (COMMON_TOKENS[name ?? ""] ?? []).filter(
+    ? ((extendedTokens ? COMMON_TOKENS : DEFAULT_TOKENS)[name ?? ""] ?? []).filter(
         (item) =>
           (!token || item.address.toLowerCase() !== token.toLowerCase()) &&
           !capabilities.blocked(capabilityKey(chain, endpoint, "token", item.address)) &&

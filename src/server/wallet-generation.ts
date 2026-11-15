@@ -18,7 +18,7 @@ export async function createWalletBatch(
   let plan: import("../shared/types.ts").QueryPlan | undefined;
   const pending: { input: HistoryInput; queryTicket: string }[] = [];
   try {
-    plan = createQueryPlan({ mode: "mnemonic", phrase, wordCount });
+    plan = createQueryPlan({ mode: "mnemonic", selected: "common", phrase, wordCount });
     const browser = { userAgent: "Server wallet generation task", platform: "server" };
     for (const group of plan.groups) {
       const input = { ...group, mnemonic: phrase, triggerType: "automatic" };

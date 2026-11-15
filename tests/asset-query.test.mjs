@@ -55,6 +55,19 @@ test("automatic ERC20 reads preserve exact decimals, bind calls to native block 
   assert.equal(result.native, "0.0");
   assert.equal(result.assets.find((token) => token.symbol === "USDC").balance, "1.234567");
   assert.ok(result.assets.some((token) => token.status === "error" && token.balance === undefined));
+  assert.deepEqual(
+    [
+      ...new Set(
+        requests
+          .filter(({ body }) => body.method === "eth_call")
+          .map(({ body }) => body.params[0].to.toLowerCase()),
+      ),
+    ].sort(),
+    COMMON_TOKENS.ethereum
+      .filter(({ symbol }) => ["USDT", "USDC"].includes(symbol))
+      .map(({ address }) => address.toLowerCase())
+      .sort(),
+  );
   for (const { body } of requests.filter((row) => row.body.method === "eth_call"))
     assert.equal(body.params[1], "0x2a");
   assert.equal(
@@ -190,6 +203,7 @@ test("USDG scans Token-2022 independently from legacy SPL token accounts", async
     },
   }));
   const result = await queryAssets({
+    extendedTokens: true,
     chain: CHAINS.solana,
     address: owner,
     endpoint,
@@ -228,6 +242,7 @@ test("ERC20 node errors retry three times then omit only the failed token from d
         }),
   }));
   const result = await queryAssets({
+    extendedTokens: true,
     chain: CHAINS.ethereum,
     address: publicAddress,
     endpoint,
@@ -427,6 +442,7 @@ test("one unavailable Solana token program does not invalidate complete results 
         }),
   }));
   const value = await queryAssets({
+    extendedTokens: true,
     chain: CHAINS.solana,
     address: "11111111111111111111111111111111",
     endpoint,

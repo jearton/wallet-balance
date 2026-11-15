@@ -88,12 +88,19 @@ export const CHAINS: Record<string, Chain> = {
   ...NON_EVM,
 };
 
-export const PREFERRED_CHAINS = ["bitcoin", "solana", "ethereum", "bsc", "mantle", "tron"];
+export const PREFERRED_CHAINS = [
+  "bitcoin",
+  "solana",
+  "ethereum",
+  "bsc",
+  "tron",
+  "base",
+  "arbitrum",
+];
+const primaryOrder = ["bitcoin", "solana", "ethereum", "bsc", "mantle", "tron"];
 export const CHAIN_ORDER = [
-  ...PREFERRED_CHAINS,
-  ...Object.keys(CHAINS).filter(
-    (name) => !PREFERRED_CHAINS.includes(name) && !CHAINS[name].disabled,
-  ),
+  ...primaryOrder,
+  ...Object.keys(CHAINS).filter((name) => !primaryOrder.includes(name) && !CHAINS[name].disabled),
 ];
 
 export function validateAddress(chain: Chain, input: string) {

@@ -1,5 +1,11 @@
 import type { QueryInput, QueryPlan, DerivedWallet, QueryGroup, Source } from "./types.ts";
-import { CHAINS, CHAIN_ORDER, validateAddress, walletFromPrivateKey } from "./wallet.ts";
+import {
+  CHAINS,
+  CHAIN_ORDER,
+  PREFERRED_CHAINS,
+  validateAddress,
+  walletFromPrivateKey,
+} from "./wallet.ts";
 import { walletFromMnemonic, DERIVATION_PATH } from "./mnemonic.ts";
 import { nonEvmWalletFromMnemonic } from "./non-evm.ts";
 
@@ -11,15 +17,14 @@ export function createQueryPlan({
   privateKey,
   address,
 }: QueryInput): QueryPlan {
+  const multiple = selected === "all" || selected === "common";
   if (
     !["mnemonic", "private", "address"].includes(mode) ||
-    (selected !== "all" && !CHAIN_ORDER.includes(selected))
+    (!multiple && !CHAIN_ORDER.includes(selected))
   )
     throw new Error("钱包来源或网络无效。");
-  let names =
-    selected === "all"
-      ? Object.keys(CHAINS).filter((name) => CHAIN_ORDER.includes(name))
-      : [selected];
+  const scope = selected === "common" ? PREFERRED_CHAINS : CHAIN_ORDER;
+  let names = multiple ? Object.keys(CHAINS).filter((name) => scope.includes(name)) : [selected];
   const wallets: QueryPlan["wallets"] = {};
   const cache = new Map<string, DerivedWallet>();
   for (const name of names) {
@@ -39,7 +44,7 @@ export function createQueryPlan({
       }
       wallets[name] = cache.get(family)!;
     } catch (error) {
-      if (selected !== "all" || mode === "mnemonic") throw error;
+      if (!multiple || mode === "mnemonic") throw error;
     }
   }
   names = CHAIN_ORDER.filter((name) => wallets[name]);

@@ -4,6 +4,7 @@ import { createBalanceAutomation } from "./balance-automation.ts";
 import { createWalletGeneration, handleWalletGeneration } from "./wallet-generation.ts";
 import { createServer } from "node:http";
 import { readFile, access } from "node:fs/promises";
+import { setImmediate as yieldToRuntime } from "node:timers/promises";
 import { randomBytes } from "node:crypto";
 import { isAllowedHost } from "./server-config.ts";
 import { openHistory } from "./history.ts";
@@ -22,6 +23,7 @@ const root = new URL("../../", import.meta.url);
 await access(new URL("dist/app.js", root));
 await access(new URL("dist/app.css", root));
 const history = openHistory(process.env.DATA_DIR || new URL("./data/", root).pathname);
+while (history.refreshWalletSummaries()) await yieldToRuntime();
 rpcCapabilities.useStorage({
   read: () => history.rpcCapabilities(),
   write: (value) => history.saveRpcCapabilities(value),
@@ -102,8 +104,17 @@ server.listen(4173, listenHost, () => {
   balances.start();
   console.log(`钱包工具已启动，监听 ${listenHost}:4173`);
 });
+// Keep summaries current even when the history page is closed for a long time.
+const summaryTimer = setInterval(() => {
+  try {
+    history.refreshWalletSummaries();
+  } catch {
+    console.error("钱包历史摘要暂时无法更新。");
+  }
+}, 1000).unref();
 for (const signal of ["SIGTERM", "SIGINT"])
   process.once(signal, async () => {
+    clearInterval(summaryTimer);
     await Promise.all([generation.stop(), balances.stop()]);
     server.close(() => {
       history.close();

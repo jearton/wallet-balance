@@ -25,7 +25,9 @@ export function NetworkSelect({
   const selected =
     value === "all"
       ? `全部匹配网络 · ${chainNames.length} 条主网`
-      : `${CHAINS[value].name} · ${CHAINS[value].symbol}`;
+      : value === "common"
+        ? `常用匹配网络 · ${PREFERRED_CHAINS.length} 条主网`
+        : `${CHAINS[value].name} · ${CHAINS[value].symbol}`;
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
@@ -49,6 +51,17 @@ export function NetworkSelect({
           <CommandList>
             <CommandEmpty>没有匹配的网络</CommandEmpty>
             <CommandGroup heading="查询范围">
+              <CommandItem
+                value="常用 common"
+                onSelect={() => {
+                  onChange("common");
+                  setOpen(false);
+                }}
+              >
+                <Layers />
+                常用匹配网络
+                <Check className={cn("ml-auto", value !== "common" && "invisible")} />
+              </CommandItem>
               <CommandItem
                 value="全部 all"
                 onSelect={() => {

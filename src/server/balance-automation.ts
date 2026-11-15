@@ -65,10 +65,14 @@ export function createBalanceAutomation(
     timer = null;
     if (stopped) return;
     try {
+      const batch: NonNullable<ReturnType<HistoryStore["claimBalance"]>>[] = [];
+      for (let slot = 0; slot < concurrency; slot++) {
+        const record = history.claimBalance();
+        if (!record) break;
+        batch.push(record);
+      }
       const outcomes = await Promise.allSettled(
-        Array.from({ length: concurrency }, async () => {
-          const record = history.claimBalance();
-          if (!record) return;
+        batch.map(async (record) => {
           activeRecords++;
           try {
             await completeBalance(history, record, query);

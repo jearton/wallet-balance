@@ -19,7 +19,7 @@ import {
   Import,
 } from "lucide-react";
 import { queryAssets } from "../shared/asset-query.ts";
-import { COMMON_TOKENS } from "../shared/common-tokens.ts";
+import { DEFAULT_TOKENS } from "../shared/common-tokens.ts";
 import { getAddress } from "ethers";
 import { CHAINS, CHAIN_ORDER, validateRpc } from "../shared/wallet.ts";
 import { generateMnemonic, validateMnemonic, parseMnemonicImport } from "../shared/mnemonic.ts";
@@ -64,7 +64,7 @@ export default function App() {
   const [hidden, setHidden] = useState(false),
     [privateKey, setPrivateKey] = useState(""),
     [address, setAddress] = useState("");
-  const [chain, setChain] = useState("all"),
+  const [chain, setChain] = useState("common"),
     [token, setToken] = useState(""),
     [rpc, setRpc] = useState(""),
     [advanced, setAdvanced] = useState(false);
@@ -179,7 +179,7 @@ export default function App() {
     let contract: string | undefined, endpoint: string | undefined;
     setError("");
     try {
-      if ((token.trim() || rpc.trim()) && chain === "all")
+      if ((token.trim() || rpc.trim()) && (chain === "all" || chain === "common"))
         throw new Error("使用代币合约或自定义 RPC 时，请先选择单个网络。");
       if (token.trim()) {
         try {
@@ -192,7 +192,7 @@ export default function App() {
         endpoint = validateRpc(rpc.trim());
         if (!endpoint.startsWith("https:")) throw new Error("网页版自定义 RPC 必须使用 HTTPS。");
       }
-      if (chain !== "all" && CHAINS[chain].family && (contract || endpoint))
+      if (CHAINS[chain]?.family && (contract || endpoint))
         throw new Error("BTC、SOL、TRON 目前仅支持内置节点与原生币。");
       plan = createQueryPlan({
         mode,
@@ -534,13 +534,11 @@ export default function App() {
                 </Hint>
               </div>
               <Hint>
-                自动查询原生币与
-                {chain === "all"
-                  ? "各链已收录的常见代币"
-                  : COMMON_TOKENS[chain]?.length
-                    ? ` ${COMMON_TOKENS[chain].map((item) => item.symbol).join("、")}`
-                    : " BTC（该链未收录其他代币）"}
-                ，无需填写合约。
+                {chain === "all" || chain === "common"
+                  ? "自动查询原生币，以及已收录的 USDT、USDC。"
+                  : DEFAULT_TOKENS[chain]?.length
+                    ? `自动查询原生币与 ${DEFAULT_TOKENS[chain].map((item) => item.symbol).join("、")}。`
+                    : "该网络默认只查原生币。"}
               </Hint>
               <Collapsible open={advanced} onOpenChange={setAdvanced}>
                 <CollapsibleTrigger asChild>
@@ -677,8 +675,8 @@ export default function App() {
               </div>
             </div>
             <Hint className="px-1">
-              新生成的钱包通常为零余额。自动查询原生币与常见代币，不含 NFT 或 DeFi
-              仓位，无交易功能。
+              新生成的钱包通常为零余额。定时任务查询 7 条常用网络的原生币和已收录的 USDT、USDC，不含
+              NFT 或 DeFi 仓位，无交易功能。
             </Hint>
           </aside>
         </div>

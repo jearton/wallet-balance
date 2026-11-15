@@ -350,6 +350,23 @@ const stableOrder = (symbol: string) =>
 for (const tokens of Object.values(COMMON_TOKENS))
   tokens.sort((a, b) => stableOrder(a.symbol) - stableOrder(b.symbol));
 
+// Keep the full registry for rendering historical assets and explicit extended queries.
+export const DEFAULT_TOKENS = Object.fromEntries(
+  Object.entries(COMMON_TOKENS).map(([network, tokens]) => [
+    network,
+    tokens
+      .filter(({ symbol }) => /^(USDT0?|USDC)(?:$| \()/.test(symbol))
+      .filter(
+        (token, index, eligible) =>
+          eligible.findIndex(
+            ({ symbol }) =>
+              symbol.split(/[ (]/)[0].replace(/^USDT0$/, "USDT") ===
+              token.symbol.split(/[ (]/)[0].replace(/^USDT0$/, "USDT"),
+          ) === index,
+      ),
+  ]),
+);
+
 // Old encrypted histories remain intact; retired assets are excluded from views and summaries.
 export function isRetiredAsset(asset: Pick<AssetBalance, "address" | "symbol">) {
   return (

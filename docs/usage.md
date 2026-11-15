@@ -10,7 +10,7 @@
 | 助记词   | 12/24 个 BIP-39 英文单词                                                                                  | 校验词库、词数和校验和，按默认路径派生地址 |
 | 私钥     | EVM/TRON：32 字节 hex；Bitcoin：压缩主网 WIF 或 hex；Solana：Base58/JSON 的 32 字节 seed 或 64 字节密钥对 | 查询可由该密钥格式推导的地址体系           |
 
-选择「全部匹配网络」时，EVM 地址可查询 10 条 EVM 主网；Solana 地址只查 Solana。公开地址不能派生其他地址体系。hex 私钥可匹配 EVM、Bitcoin 与 TRON，不能当作 Solana 的 Ed25519 密钥。
+默认选择「常用匹配网络」：Bitcoin、Solana、Ethereum、BNB Smart Chain、TRON、Base、Arbitrum。仍可选择其他单链，或切换到「全部匹配网络」。选择「全部匹配网络」时，EVM 地址可查询 10 条 EVM 主网；Solana 地址只查 Solana。公开地址不能派生其他地址体系。hex 私钥可匹配 EVM、Bitcoin 与 TRON，不能当作 Solana 的 Ed25519 密钥。
 
 助记词可逐词编辑或整组导入，支持常见标点、换行和连续序号。输入错误会给出校验提示，不猜词、不修复校验和、不自动重排。生成或编辑不会发起链上查询，点击查询后才读取余额。
 
@@ -27,10 +27,10 @@
 
 ## 代币余额
 
-网页自动查询 [common-tokens.ts](../src/shared/common-tokens.ts) 收录的常见代币，按网络和合约/mint 识别，按币种展示。明确为同一版本的跨链金额精确汇总，桥接币、包装币和 Binance-Peg 版本分开。
+网页默认只自动查询原生币和 [白名单](../src/shared/common-tokens.ts) 中对应网络的 USDT、USDC（每种最多一个版本），按网络和合约/mint 识别，按币种展示。明确为同一版本的跨链金额精确汇总，桥接币、包装币和 Binance-Peg 版本分开。
 
 - EVM：原生币与代币在同一区块读取，可选择单链并填写 ERC-20 合约或自定义 HTTPS RPC。
-- Solana：分别枚举 SPL 与 Token-2022 的全部 owner token accounts，按 mint 精确合计；枚举不可用时跳过对应程序的代币，不回退到标准 ATA 子集。
+- Solana：完整枚举默认代币所在 SPL 程序下的全部 owner token accounts，按 mint 精确合计；枚举不可用时跳过代币，不回退到标准 ATA 子集。
 - TRON：通过 Solidity 节点只读查询 USDT，不签名、不广播、不消耗能量。
 - Bitcoin：只统计原生 BTC，不统计 WBTC、BTCB 等包装资产。
 
