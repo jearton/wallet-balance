@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.0.3](https://github.com/jearton/wallet-balance/compare/v1.0.2...v1.0.3) (2026-11-15)
+
+### Bug Fixes
+
+- **history:** 🐛 index reservation lookups to prevent background query stalls ([5b5dd08](https://github.com/jearton/wallet-balance/commit/5b5dd08e246c5511328297cedb306b270dce6ee8))
+
+### Performance
+
+- **history:** ⚡️ index wallet history and reduce default balance queries ([56e9c4d](https://github.com/jearton/wallet-balance/commit/56e9c4daae5824669c35c7055d073d5f33107977))
+
 ## [1.0.2](https://github.com/jearton/wallet-balance/compare/v1.0.1...v1.0.2) (2026-11-01)
 
 ### Features
